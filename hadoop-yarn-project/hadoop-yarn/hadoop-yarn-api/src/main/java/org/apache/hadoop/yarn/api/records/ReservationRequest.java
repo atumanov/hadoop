@@ -49,16 +49,22 @@ public abstract class ReservationRequest implements
       int numContainers) {
     return newInstance(capability, numContainers, 1, -1);
   }
+  
+  public static ReservationRequest newInstance(Resource capability,
+	      int numContainers, int concurrency, long duration) {
+	  return newInstance(capability, numContainers, concurrency, duration, null);
+  }
 
   @Public
   @Unstable
   public static ReservationRequest newInstance(Resource capability,
-      int numContainers, int concurrency, long duration) {
+      int numContainers, int concurrency, long duration, String labelExpression) {
     ReservationRequest request = Records.newRecord(ReservationRequest.class);
     request.setCapability(capability);
     request.setNumContainers(numContainers);
     request.setConcurrency(concurrency);
     request.setDuration(duration);
+    request.setNodeLabelExpression(labelExpression);
     return request;
   }
 
@@ -78,6 +84,10 @@ public abstract class ReservationRequest implements
       }
       if (ret == 0) {
         ret = r1.getCapability().compareTo(r2.getCapability());
+      }
+      // compare node label expressions as well
+      if (ret == 0 ) {
+    	  ret = r1.getNodeLabelExpresion().compareTo(r2.getNodeLabelExpresion());
       }
       return ret;
     }
@@ -162,6 +172,14 @@ public abstract class ReservationRequest implements
   @Public
   @Unstable
   public abstract void setDuration(long duration);
+  
+  @Public
+  @Unstable
+  public abstract String getNodeLabelExpresion();
+  
+  @Public
+  @Unstable
+  public abstract void setNodeLabelExpression(String nodelabelExpression);
 
   @Override
   public int hashCode() {
@@ -194,6 +212,9 @@ public abstract class ReservationRequest implements
       return false;
     if (getConcurrency() != other.getConcurrency())
       return false;
+    if (! getNodeLabelExpresion().equals(other.getNodeLabelExpresion()))
+    	return false;
+    
     return true;
   }
 
@@ -205,6 +226,7 @@ public abstract class ReservationRequest implements
       int concurrencyComparison =
           this.getConcurrency() - other.getConcurrency();
       if (concurrencyComparison == 0) {
+    	  //TODO(atumanov): do we need to compare node label expressions here?
         return this.getCapability().compareTo(other.getCapability());
       } else {
         return concurrencyComparison;
