@@ -325,7 +325,7 @@ public class GreedyReservationAgent implements ReservationAgent {
         ReservationRequest reservationRes =
             ReservationRequest.newInstance(rr.getCapability(),
                 rr.getConcurrency() * maxGang, rr.getConcurrency(),
-                rr.getDuration());
+                rr.getDuration(), rr.getNodeLabelExpression());
         // remember occupied space (plan is read-only till we find a plausible
         // allocation for the entire request). This is needed since we might be
         // placing other ReservationRequest within the same
