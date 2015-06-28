@@ -87,7 +87,7 @@ public abstract class ReservationRequest implements
       }
       // compare node label expressions as well
       if (ret == 0 ) {
-    	  ret = r1.getNodeLabelExpresion().compareTo(r2.getNodeLabelExpresion());
+    	  ret = r1.getNodeLabelExpression().compareTo(r2.getNodeLabelExpression());
       }
       return ret;
     }
@@ -175,7 +175,7 @@ public abstract class ReservationRequest implements
   
   @Public
   @Unstable
-  public abstract String getNodeLabelExpresion();
+  public abstract String getNodeLabelExpression();
   
   @Public
   @Unstable
@@ -212,7 +212,7 @@ public abstract class ReservationRequest implements
       return false;
     if (getConcurrency() != other.getConcurrency())
       return false;
-    if (! getNodeLabelExpresion().equals(other.getNodeLabelExpresion()))
+    if (! getNodeLabelExpression().equals(other.getNodeLabelExpression()))
     	return false;
     
     return true;
