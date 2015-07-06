@@ -23,6 +23,11 @@ public class QueueEntitlement {
   private float capacity;
   private float maxCapacity;
 
+  public QueueEntitlement()
+  {
+	  //empty ctor
+  }
+  
   public QueueEntitlement(float capacity, float maxCapacity){
     this.setCapacity(capacity);
     this.maxCapacity = maxCapacity;
