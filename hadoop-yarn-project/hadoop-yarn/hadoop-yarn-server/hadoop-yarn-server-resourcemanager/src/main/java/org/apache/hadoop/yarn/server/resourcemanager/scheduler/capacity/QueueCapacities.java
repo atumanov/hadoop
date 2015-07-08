@@ -172,10 +172,10 @@ public class QueueCapacities {
 	  // all locks held by callees
 	  for (String label: capacitiesMap.keySet()) {
 		  float v = getCapacity(label);
-		  if (v < 0f || 1f > v)
+		  if (v < 0f || 1f < v)
 			  return false;
 		  v = getMaximumCapacity(label);
-		  if (v < 0f || 1f > v)
+		  if (v < 0f || 1f < v)
 			  return false;
 	  }
 	  return true;
