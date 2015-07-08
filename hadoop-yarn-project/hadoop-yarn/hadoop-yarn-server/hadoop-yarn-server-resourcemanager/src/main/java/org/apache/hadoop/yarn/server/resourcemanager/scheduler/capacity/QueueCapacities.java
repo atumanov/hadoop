@@ -78,6 +78,7 @@ public class QueueCapacities {
     }
   }
   
+  // acquires/releases the readLock
   private float _get(String label, CapacityType type) {
     try {
       readLock.lock();
@@ -91,6 +92,7 @@ public class QueueCapacities {
     }
   }
   
+  // acquires/releases the writeLock
   private void _set(String label, CapacityType type, float value) {
     try {
       writeLock.lock();
@@ -104,6 +106,81 @@ public class QueueCapacities {
       writeLock.unlock();
     }
   }
+  
+  /* Vector Ops on QueueCapacities: assign, add, subtract */
+  // setQueueCapacities (this := other): Copy all queue capacities from other except used.
+  // Used capacities are not touched similarly to clearConfigurableFields()
+  public void setQueueCapacities(QueueCapacities other) {
+	  // all locks handled by callees 
+	  clearConfigurableFields();
+	  for (String label : other.capacitiesMap.keySet()) {
+		  setCapacity(label, other.getCapacity(label));
+		  setMaximumCapacity(label, other.getMaximumCapacity(label));
+		  setAbsoluteCapacity(label, other.getAbsoluteCapacity(label));
+		  setAbsoluteMaximumCapacity(label, other.getAbsoluteMaximumCapacity(label));
+	  }
+  }
+  
+  // addQueueCapacities (this += other):
+  public void addQueueCapacities(QueueCapacities other) {
+	  // TODO: semantics of vector ops on QueueCapacities when label sets don't match?
+	  // Assumption: vector ops performed only on a set of labels in 'this'
+	  // TODO: make this more robust to absence of labels in other (trivial)
+	  for (String label: capacitiesMap.keySet()) {
+		  float v = getCapacity(label) + other.getCapacity(label);
+		  setCapacity(label, v);
+		  v = getMaximumCapacity(label) + other.getMaximumCapacity(label);
+		  setMaximumCapacity(label, v);
+		  v = getAbsoluteCapacity(label) + other.getAbsoluteCapacity(label);
+		  setAbsoluteCapacity(label, v);
+		  v = getAbsoluteMaximumCapacity(label) + other.getAbsoluteMaximumCapacity(label);
+		  setAbsoluteMaximumCapacity(label, v);
+	  }
+  }
+  
+  // subtractQueueCapacities (this -= other):
+  public void subtractQueueCapacities(QueueCapacities other) {
+	  // Assumption: vector ops performed only on a set of labels in 'this'
+	  // TODO: make this more robust to absence of labels in other (trivial)
+	  for (String label: capacitiesMap.keySet()) {
+		  float v = getCapacity(label) - other.getCapacity(label);
+		  setCapacity(label, v);
+		  v = getMaximumCapacity(label) - other.getMaximumCapacity(label);
+		  setMaximumCapacity(label, v);
+		  v = getAbsoluteCapacity(label) - other.getAbsoluteCapacity(label);
+		  setAbsoluteCapacity(label, v);
+		  v = getAbsoluteMaximumCapacity(label) - other.getAbsoluteMaximumCapacity(label);
+		  setAbsoluteMaximumCapacity(label, v);
+	  }
+  }
+  
+  // returns true iff all capacities (except used) are zero across all labels
+  public boolean isQueueCapacitiesZero() {
+	  // all locks held by callees
+	  for (String label: capacitiesMap.keySet()) {
+		  if (0f != getCapacity(label) ||
+			  0f != getMaximumCapacity(label) ||
+			  0f != getAbsoluteCapacity(label) ||
+			  0f != getAbsoluteMaximumCapacity(label))
+			  return false;
+	  }
+	  return true;
+  }
+  
+  // self-validation method: currently only checks bounds on relative configurable capacities
+  public boolean isQueueCapacitiesValid() {
+	  // all locks held by callees
+	  for (String label: capacitiesMap.keySet()) {
+		  float v = getCapacity(label);
+		  if (v < 0f || 1f > v)
+			  return false;
+		  v = getMaximumCapacity(label);
+		  if (v < 0f || 1f > v)
+			  return false;
+	  }
+	  return true;
+  }
+  
 
   /* Used Capacity Getter and Setter */
   public float getUsedCapacity() {
