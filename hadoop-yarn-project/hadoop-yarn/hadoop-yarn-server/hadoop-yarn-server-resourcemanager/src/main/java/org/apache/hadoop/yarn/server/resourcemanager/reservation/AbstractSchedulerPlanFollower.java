@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.Plan
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.NodeLabelQueueEntitlement;
 
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -85,10 +85,13 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     if (planQueue == null) return;
 
     // first we publish to the plan the current availability of resources
+    // TODO(atumanov): cluster resource availability should be changed to be per label
+    // expect : Map<String, Resource> clusterResourceMap = scheduler.getClusterResource();
     Resource clusterResources = scheduler.getClusterResource();
-    Resource planResources = getPlanResources(plan, planQueue,
-        clusterResources);
+    Resource planResources = getPlanResources(plan, planQueue, clusterResources);
 
+    // TODO(atumanov): ReservationAllocations returned in a map
+    // expect: Map<String, Set<ReservationAllocation>> curResMap
     Set<ReservationAllocation> currentReservations =
         plan.getReservationsAtTime(now);
     Set<String> curReservationNames = new HashSet<String>();
@@ -225,7 +228,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
       float maxCapacity) throws YarnException {
     String reservationQueueName = getReservationQueueName(planQueueName,
         currResId);
-    scheduler.setEntitlement(reservationQueueName, new QueueEntitlement(
+    scheduler.setEntitlement(reservationQueueName, new NodeLabelQueueEntitlement(
         targetCapacity, maxCapacity));
   }
 

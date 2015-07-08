@@ -87,11 +87,15 @@ public class ReservationQueue extends LeafQueue {
       throw new SchedulerDynamicEditException(
           "Capacity demand is not in the [0,1] range: " + capacity);
     }
+
+    //SET PER NODE LABEL
     setCapacity(capacity);
     setAbsoluteCapacity(getParent().getAbsoluteCapacity() * getCapacity());
+
+    //SET USING SUM OF ALL ABS CAPACITIES ACROSS ALL NODE LABELS
     setMaxApplications((int) (maxSystemApps * getAbsoluteCapacity()));
-    // note: we currently set maxCapacity to capacity
-    // this might be revised later
+
+    //SET PER NODE LABEL
     setMaxCapacity(entitlement.getMaxCapacity());
     if (LOG.isDebugEnabled()) {
       LOG.debug("successfully changed to " + capacity + " for queue "
