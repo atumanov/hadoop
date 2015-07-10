@@ -110,23 +110,24 @@ public class QueueCapacities {
   /* Vector Ops on QueueCapacities: assign, add, subtract */
   // setQueueCapacities (this := other): Copy all queue capacities from other except used.
   // Used capacities are not touched similarly to clearConfigurableFields()
-  public void setQueueCapacities(QueueCapacities other) {
+  public QueueCapacities setQueueCapacities(QueueCapacities other) {
 	  // all locks handled by callees 
 	  clearConfigurableFields();
-	  for (String label : other.capacitiesMap.keySet()) {
+	  for (String label : other.getExistingNodeLabels()) {
 		  setCapacity(label, other.getCapacity(label));
 		  setMaximumCapacity(label, other.getMaximumCapacity(label));
 		  setAbsoluteCapacity(label, other.getAbsoluteCapacity(label));
 		  setAbsoluteMaximumCapacity(label, other.getAbsoluteMaximumCapacity(label));
 	  }
+	  return this;
   }
   
   // addQueueCapacities (this += other):
-  public void addQueueCapacities(QueueCapacities other) {
+  public QueueCapacities addQueueCapacities(QueueCapacities other) {
 	  // TODO: semantics of vector ops on QueueCapacities when label sets don't match?
 	  // Assumption: vector ops performed only on a set of labels in 'this'
 	  // TODO: make this more robust to absence of labels in other (trivial)
-	  for (String label: capacitiesMap.keySet()) {
+	  for (String label: getExistingNodeLabels()) {
 		  float v = getCapacity(label) + other.getCapacity(label);
 		  setCapacity(label, v);
 		  v = getMaximumCapacity(label) + other.getMaximumCapacity(label);
@@ -136,13 +137,14 @@ public class QueueCapacities {
 		  v = getAbsoluteMaximumCapacity(label) + other.getAbsoluteMaximumCapacity(label);
 		  setAbsoluteMaximumCapacity(label, v);
 	  }
+	  return this;
   }
   
   // subtractQueueCapacities (this -= other):
-  public void subtractQueueCapacities(QueueCapacities other) {
+  public QueueCapacities subtractQueueCapacities(QueueCapacities other) {
 	  // Assumption: vector ops performed only on a set of labels in 'this'
 	  // TODO: make this more robust to absence of labels in other (trivial)
-	  for (String label: capacitiesMap.keySet()) {
+	  for (String label: getExistingNodeLabels()) {
 		  float v = getCapacity(label) - other.getCapacity(label);
 		  setCapacity(label, v);
 		  v = getMaximumCapacity(label) - other.getMaximumCapacity(label);
@@ -152,30 +154,84 @@ public class QueueCapacities {
 		  v = getAbsoluteMaximumCapacity(label) - other.getAbsoluteMaximumCapacity(label);
 		  setAbsoluteMaximumCapacity(label, v);
 	  }
+	  return this;
   }
   
   // returns true iff all capacities (except used) are zero across all labels
   public boolean isQueueCapacitiesZero() {
 	  // all locks held by callees
-	  for (String label: capacitiesMap.keySet()) {
-		  if (0f != getCapacity(label) ||
-			  0f != getMaximumCapacity(label) ||
-			  0f != getAbsoluteCapacity(label) ||
-			  0f != getAbsoluteMaximumCapacity(label))
+	  for (String label: getExistingNodeLabels()) {
+		  if (Math.abs(getCapacity(label)) > CSQueueUtils.EPSILON ||
+			  Math.abs(getMaximumCapacity(label)) > CSQueueUtils.EPSILON ||
+			  Math.abs(getAbsoluteCapacity(label)) > CSQueueUtils.EPSILON ||
+			  Math.abs(getAbsoluteMaximumCapacity(label)) > CSQueueUtils.EPSILON)
 			  return false;
 	  }
 	  return true;
   }
-  
-  // self-validation method: currently only checks bounds on relative configurable capacities
-  public boolean isQueueCapacitiesValid() {
+
+ public boolean isCapacityZero() {
 	  // all locks held by callees
-	  for (String label: capacitiesMap.keySet()) {
-		  float v = getCapacity(label);
-		  if (v < 0f || 1f < v)
+	  for (String label: getExistingNodeLabels()) {
+		  if (Math.abs(getCapacity(label)) > CSQueueUtils.EPSILON)
 			  return false;
-		  v = getMaximumCapacity(label);
-		  if (v < 0f || 1f < v)
+	  }
+	  // there exists a label such that cap for that label is more than epsilon
+	  return true;
+ }
+
+ public boolean isMaximumCapacityZero() {
+	  // all locks held by callees
+	  for (String label: getExistingNodeLabels()) {
+		  if (Math.abs(getMaximumCapacity(label)) > CSQueueUtils.EPSILON)
+			  return false;
+	  }
+	  // there exists a label such that maxcap for that label is more than epsilon 
+	  return true;
+}
+  
+  public boolean isQueueCapacitiesValid() {
+	  return isQueueCapacitiesValid(null);
+  }
+  
+  public boolean isQueueCapacitiesValid(QueueCapacities parent) {
+	  // Assumption: this object is in consistent state, 
+	  // including w.r.t its parent, IF provided.
+	  for (String label: getExistingNodeLabels()) {
+		  // relative
+		  float cap = getCapacity(label);
+		  if (cap < 0f || 1f < cap)
+			  return false;
+		  float maxcap = getMaximumCapacity(label);
+		  if (maxcap < 0f || 1f < maxcap) //CSQueueUtils::checkMaxCapacity
+			  return false;
+		  if (cap > maxcap)
+			  return false; //CSQueueUtils::capacitiesSanityCheck()
+		  // absolute
+		  float abscap = getAbsoluteCapacity(label);
+		  float absmaxcap = getAbsoluteMaximumCapacity(label);
+		  if (abscap > absmaxcap)
+			  return false; //CSQueueUtils::capacitiesSanityCheck()
+	  }
+	  
+	  if (parent == null)
+		  return true; // done
+	  
+	  // additional checks if parent capacities were provided
+	  // first of all, assert that a set of labels in the child is a subset of parent
+	  Set<String> childlabels = getExistingNodeLabels();
+	  Set<String> parentlabels = parent.getExistingNodeLabels();
+	  if (!parentlabels.containsAll(childlabels))
+		  return false;
+	  
+	  // iterate over all labels of the child validated to be in the parent
+	  for (String label: childlabels) {
+		  // TODO: calculate child's absolute capacity based on parent's absolute cap
+		  // and cross-validate this->getAbsoluteCapacity
+		  // float abscap = getCapacity(label) * parent.getAbsoluteCapacity(label);
+		  // float absmaxcap = getMaximumCapacity(label) * parent.getAbsoluteMaximumCapacity(label);
+		  if ((getAbsoluteCapacity(label) > parent.getAbsoluteCapacity(label)) ||
+			  (getAbsoluteMaximumCapacity(label) > parent.getAbsoluteMaximumCapacity(label)))
 			  return false;
 	  }
 	  return true;
