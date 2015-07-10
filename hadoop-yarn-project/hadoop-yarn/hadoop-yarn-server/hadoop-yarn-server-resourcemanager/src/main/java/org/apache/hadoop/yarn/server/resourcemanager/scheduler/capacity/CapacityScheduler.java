@@ -99,7 +99,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.QueueMapping.MappingType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.AssignmentInformation;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -1655,7 +1654,7 @@ public class CapacityScheduler extends
 
   @Override
   public synchronized void setEntitlement(String inQueue,
-      QueueEntitlement entitlement) throws SchedulerDynamicEditException,
+      QueueCapacities entitlement) throws SchedulerDynamicEditException,
       YarnException {
     LeafQueue queue = getAndCheckLeafQueue(inQueue);
     ParentQueue parent = (ParentQueue) queue.getParent();
@@ -1673,24 +1672,31 @@ public class CapacityScheduler extends
 
     ReservationQueue newQueue = (ReservationQueue) queue;
 
-    float sumChilds = ((PlanQueue) parent).sumOfChildCapacities();
-    float newChildCap = sumChilds - queue.getCapacity() + entitlement.getCapacity();
-
-    if (newChildCap >= 0 && newChildCap < 1.0f + CSQueueUtils.EPSILON) {
-      // note: epsilon checks here are not ok, as the epsilons might accumulate
-      // and become a problem in aggregate
-      if (Math.abs(entitlement.getCapacity() - queue.getCapacity()) == 0
-          && Math.abs(entitlement.getMaxCapacity() - queue.getMaximumCapacity()) == 0) {
-        return;
-      }
-      newQueue.setEntitlement(entitlement);
-    } else {
-      throw new SchedulerDynamicEditException(
+   //float sumChilds = ((PlanQueue) parent).sumOfChildCapacities();
+    QueueCapacities sumChildCap = new QueueCapacities(false);
+    for (CSQueue childq : ((PlanQueue) parent).getChildQueues()) {
+    	sumChildCap.addQueueCapacities(childq.getQueueCapacities());
+    }
+    //float newChildCap = sumChilds - queue.getCapacity() + entitlement.getCapacity();
+    QueueCapacities newChildCap = sumChildCap
+    		.subtractQueueCapacities(queue.getQueueCapacities())
+    		.addQueueCapacities(entitlement);
+    // sanity check new child capacities object
+    if (!newChildCap.isQueueCapacitiesValid()) {
+    	      throw new SchedulerDynamicEditException(
           "Sum of child queues would exceed 100% for PlanQueue: "
               + parent.getQueueName());
     }
+    // optimization: if the queue capacity is not going to change: do nothing
+    QueueCapacities deltaCap = new QueueCapacities(false);
+    deltaCap.setQueueCapacities(queue.getQueueCapacities()).subtractQueueCapacities(entitlement);
+    // check whether deltaCap is within epsilon of zero
+    if (deltaCap.isCapacityZero() && deltaCap.isMaximumCapacityZero())
+    	return;
+    
+      newQueue.setEntitlement(entitlement);
     LOG.info("Set entitlement for ReservationQueue " + inQueue + "  to "
-        + queue.getCapacity() + " request was (" + entitlement.getCapacity() + ")");
+        + queue.getQueueCapacities().toString() + " request was (" + entitlement.toString() + ")");
   }
 
   @Override

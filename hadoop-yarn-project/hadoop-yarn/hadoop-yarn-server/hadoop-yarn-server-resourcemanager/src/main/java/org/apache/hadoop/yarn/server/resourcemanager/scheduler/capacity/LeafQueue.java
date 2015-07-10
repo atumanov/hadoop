@@ -2037,9 +2037,17 @@ public class LeafQueue extends AbstractCSQueue {
   public void setCapacity(float capacity) {
     queueCapacities.setCapacity(capacity);
   }
+  
+  public void setCapacity(String label, float capacity) {
+	  queueCapacities.setCapacity(label, capacity);
+  }
 
   public void setAbsoluteCapacity(float absoluteCapacity) {
     queueCapacities.setAbsoluteCapacity(absoluteCapacity);
+  }
+  
+  public void setAbsoluteCapacity(String label, float absoluteCapacity) {
+	  queueCapacities.setAbsoluteCapacity(label, absoluteCapacity);
   }
 
   public void setMaxApplications(int maxApplications) {

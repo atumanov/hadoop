@@ -212,7 +212,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   /**
-   * Set maximum capacity - used only for testing.
+   * Set maximum capacity - used by the reservation system
    * @param maximumCapacity new max capacity
    */
   synchronized void setMaxCapacity(float maximumCapacity) {
@@ -227,6 +227,24 @@ public abstract class AbstractCSQueue implements CSQueue {
     
     queueCapacities.setMaximumCapacity(maximumCapacity);
     queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
+  }
+  
+  /**
+   * Set maximum capacity - used by the reservation system
+   * @param maximumCapacity new max capacity
+   */
+  synchronized void setMaxCapacity(String label, float maximumCapacity) {
+    // Sanity check
+    CSQueueUtils.checkMaxCapacity(getQueueName(),
+        queueCapacities.getCapacity(label), maximumCapacity);
+    float absMaxCapacity =
+        CSQueueUtils.computeAbsoluteMaximumCapacity(label, maximumCapacity, parent);
+    CSQueueUtils.checkAbsoluteCapacity(getQueueName(),
+        queueCapacities.getAbsoluteCapacity(label),
+        absMaxCapacity);
+    
+    queueCapacities.setMaximumCapacity(label, maximumCapacity);
+    queueCapacities.setAbsoluteMaximumCapacity(label, absMaxCapacity);
   }
 
   @Override

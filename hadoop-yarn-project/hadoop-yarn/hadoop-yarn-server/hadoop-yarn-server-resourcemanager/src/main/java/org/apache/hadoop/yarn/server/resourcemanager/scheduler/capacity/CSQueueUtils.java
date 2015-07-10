@@ -17,7 +17,6 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -89,12 +88,18 @@ class CSQueueUtils {
       }
     }
   }
+  
+  public static float computeAbsoluteMaximumCapacity(
+	      String label, float maximumCapacity, CSQueue parent) {
+	    float parentAbsMaxCapacity = 
+	        (parent == null) ? 1.0f : parent.getQueueCapacities().getAbsoluteMaximumCapacity(label);
+	    return (parentAbsMaxCapacity * maximumCapacity);
+	  }
 
   public static float computeAbsoluteMaximumCapacity(
       float maximumCapacity, CSQueue parent) {
-    float parentAbsMaxCapacity = 
-        (parent == null) ? 1.0f : parent.getAbsoluteMaximumCapacity();
-    return (parentAbsMaxCapacity * maximumCapacity);
+	  return computeAbsoluteMaximumCapacity(CommonNodeLabelsManager.NO_LABEL, 
+			  maximumCapacity, parent);
   }
   
   /**

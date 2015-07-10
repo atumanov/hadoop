@@ -23,7 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,26 +79,43 @@ public class ReservationQueue extends LeafQueue {
    *          maxCapacity, etc..)
    * @throws SchedulerDynamicEditException
    */
-  public synchronized void setEntitlement(QueueEntitlement entitlement)
+  public synchronized void setEntitlement(QueueCapacities entitlement)
       throws SchedulerDynamicEditException {
-    float capacity = entitlement.getCapacity();
-    if (capacity < 0 || capacity > 1.0f) {
+	// perform self-check on the entitlement object
+	if (!entitlement.isQueueCapacitiesValid()) {  
+    //float capacity = entitlement.getCapacity();
+    //if (capacity < 0 || capacity > 1.0f) {
       throw new SchedulerDynamicEditException(
-          "Capacity demand is not in the [0,1] range: " + capacity);
+    	  "Self-check failed on the queue entitlement: " + entitlement.toString() );
     }
 
-    //SET PER NODE LABEL
-    setCapacity(capacity);
-    setAbsoluteCapacity(getParent().getAbsoluteCapacity() * getCapacity());
+	float totalAbsCap = 0f;
+    for (String label: entitlement.getExistingNodeLabels()) {
+    	// set cap
+    	float cap = entitlement.getCapacity(label);
+    	setCapacity(label, cap);
+    	// set abscap = parent.abscap * child.cap ; 
+    	float absCap = getParent().getQueueCapacities().getAbsoluteCapacity(label) * cap;
+    	totalAbsCap += absCap; // aggregate over all labels
+    	setAbsoluteCapacity(label, absCap);
+    	// set maxcap
+    	setMaxCapacity(label, entitlement.getMaximumCapacity(label));
+    }
 
-    //SET USING SUM OF ALL ABS CAPACITIES ACROSS ALL NODE LABELS
-    setMaxApplications((int) (maxSystemApps * getAbsoluteCapacity()));
-
-    //SET PER NODE LABEL
-    setMaxCapacity(entitlement.getMaxCapacity());
+    setMaxApplications((int) (maxSystemApps * totalAbsCap));
+    
+//    //SET PER NODE LABEL
+//    setCapacity(capacity);
+//    setAbsoluteCapacity(getParent().getAbsoluteCapacity() * getCapacity());
+//
+//    //SET USING SUM OF ALL ABS CAPACITIES ACROSS ALL NODE LABELS
+//    setMaxApplications((int) (maxSystemApps * getAbsoluteCapacity()));
+//
+//    //SET PER NODE LABEL
+//    setMaxCapacity(entitlement.getMaxCapacity());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("successfully changed to " + capacity + " for queue "
-          + this.getQueueName());
+      LOG.debug("Queue" + this.getQueueName() + " successfully updated with "
+    		  + " capacity " + entitlement.toString());
     }
   }
 

@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -270,7 +270,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    *              maxCapacity, etc..)
    * @throws YarnException
    */
-  void setEntitlement(String queue, QueueEntitlement entitlement)
+  void setEntitlement(String queue, QueueCapacities entitlement)
       throws YarnException;
 
   /**
