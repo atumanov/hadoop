@@ -26,8 +26,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.Plan
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.NodeLabelQueueEntitlement;
-
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
@@ -86,6 +85,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
 
     // first we publish to the plan the current availability of resources
     // TODO(atumanov): cluster resource availability should be changed to be per label
+    // CONTINUE HERE
     // expect : Map<String, Resource> clusterResourceMap = scheduler.getClusterResource();
     Resource clusterResources = scheduler.getClusterResource();
     Resource planResources = getPlanResources(plan, planQueue, clusterResources);
@@ -142,7 +142,10 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     if (currentReservations != null) {
       // first release all excess capacity in default queue
       try {
-        setQueueEntitlement(planQueueName, defReservationQueue, 0f, 1.0f);
+    	QueueCapacities newcap = new QueueCapacities(false);
+    	newcap.setCapacity(0f);
+    	newcap.setMaximumCapacity(1.0f);
+        setQueueEntitlement(planQueueName, defReservationQueue, newcap);
       } catch (YarnException e) {
         LOG.warn(
             "Exception while trying to release default queue capacity for plan: {}",
@@ -183,7 +186,10 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
           maxCapacity = targetCapacity;
         }
         try {
-          setQueueEntitlement(planQueueName, currResId, targetCapacity, maxCapacity);
+          QueueCapacities newcap = new QueueCapacities(false);
+          newcap.setCapacity(targetCapacity);
+          newcap.setMaximumCapacity(maxCapacity);
+          setQueueEntitlement(planQueueName, currResId, newcap);
         } catch (YarnException e) {
           LOG.warn("Exception while trying to size reservation for plan: {}",
               currResId, planQueueName, e);
@@ -200,7 +206,10 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     }
     // set the default queue to eat-up all remaining capacity
     try {
-      setQueueEntitlement(planQueueName, defReservationQueue, defQCap, 1.0f);
+      QueueCapacities newcap = new QueueCapacities(false);
+      newcap.setCapacity(defQCap);
+      newcap.setMaximumCapacity(1.0f);
+      setQueueEntitlement(planQueueName, defReservationQueue, newcap);
     } catch (YarnException e) {
       LOG.warn(
           "Exception while trying to reclaim default queue capacity for plan: {}",
@@ -224,12 +233,10 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
   }
 
   protected void setQueueEntitlement(String planQueueName, String currResId,
-      float targetCapacity,
-      float maxCapacity) throws YarnException {
+		  QueueCapacities qcap) throws YarnException {
     String reservationQueueName = getReservationQueueName(planQueueName,
         currResId);
-    scheduler.setEntitlement(reservationQueueName, new NodeLabelQueueEntitlement(
-        targetCapacity, maxCapacity));
+    scheduler.setEntitlement(reservationQueueName, qcap);
   }
 
   // Schedulers have different ways of naming queues. See YARN-2773
@@ -251,7 +258,10 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
         // reduce entitlement to 0
         String expiredReservation = getReservationQueueName(planQueueName,
             expiredReservationId);
-        setQueueEntitlement(planQueueName, expiredReservation, 0.0f, 0.0f);
+        QueueCapacities newcap = new QueueCapacities(false);
+        newcap.setCapacity(0.0f);
+        newcap.setMaximumCapacity(0.0f);
+        setQueueEntitlement(planQueueName, expiredReservation, newcap);
         if (shouldMove) {
           moveAppsInQueueSync(expiredReservation, defReservationQueue);
         }
