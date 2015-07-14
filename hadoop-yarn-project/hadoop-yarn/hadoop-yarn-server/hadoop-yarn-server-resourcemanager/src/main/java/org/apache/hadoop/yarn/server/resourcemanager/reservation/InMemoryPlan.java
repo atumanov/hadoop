@@ -30,9 +30,12 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.util.Clock;
@@ -74,7 +77,8 @@ class InMemoryPlan implements Plan {
   private final boolean getMoveOnExpiry;
   private final Clock clock;
 
-  private Resource totalCapacity;
+  //private Resource totalCapacity;
+  private Map<String, RMNodeLabel> totalCapacities;
 
   InMemoryPlan(QueueMetrics queueMetrics, SharingPolicy policy,
       ReservationAgent agent, Resource totalCapacity, long step,
@@ -88,11 +92,21 @@ class InMemoryPlan implements Plan {
       ReservationAgent agent, Resource totalCapacity, long step,
       ResourceCalculator resCalc, Resource minAlloc, Resource maxAlloc,
       String queueName, Planner replanner, boolean getMoveOnExpiry, Clock clock) {
+    this(queueMetrics, policy, agent, Collections.singletonMap(RMNodeLabelsManager.NO_LABEL, new RMNodeLabel(
+        RMNodeLabelsManager.NO_LABEL, totalCapacity, -1, false)), step, resCalc, 
+        minAlloc, maxAlloc, queueName, replanner, getMoveOnExpiry, clock);
+
+  }
+
+  InMemoryPlan(QueueMetrics queueMetrics, SharingPolicy policy,
+      ReservationAgent agent, Map<String, RMNodeLabel> totalCapacities, long step,
+      ResourceCalculator resCalc, Resource minAlloc, Resource maxAlloc,
+      String queueName, Planner replanner, boolean getMoveOnExpiry, Clock clock) {
     this.queueMetrics = queueMetrics;
     this.policy = policy;
     this.agent = agent;
     this.step = step;
-    this.totalCapacity = totalCapacity;
+    this.totalCapacities = totalCapacities;
     this.resCalc = resCalc;
     this.minAlloc = minAlloc;
     this.maxAlloc = maxAlloc;
@@ -102,7 +116,8 @@ class InMemoryPlan implements Plan {
     this.getMoveOnExpiry = getMoveOnExpiry;
     this.clock = clock;
   }
-
+  
+  
   @Override
   public QueueMetrics getQueueMetrics() {
     return queueMetrics;
@@ -434,7 +449,13 @@ class InMemoryPlan implements Plan {
   public Resource getTotalCapacity() {
     readLock.lock();
     try {
-      return Resources.clone(totalCapacity);
+      // NOTE: we are interpreting this as the total capacity wihout node labels
+      if (totalCapacities.containsKey(RMNodeLabelsManager.NO_LABEL)) {
+        return Resources.clone(totalCapacities
+            .get(RMNodeLabelsManager.NO_LABEL).getResource());
+      } else {
+        return Resource.newInstance(0, 0);
+      }
     } finally {
       readLock.unlock();
     }
@@ -449,7 +470,10 @@ class InMemoryPlan implements Plan {
   public void setTotalCapacity(Resource cap) {
     writeLock.lock();
     try {
-      totalCapacity = Resources.clone(cap);
+      if (totalCapacities.containsKey(RMNodeLabelsManager.NO_LABEL)) {
+        totalCapacities.get(RMNodeLabelsManager.NO_LABEL).setResource(
+            Resources.clone(cap));
+      }
     } finally {
       writeLock.unlock();
     }
@@ -514,7 +538,7 @@ class InMemoryPlan implements Plan {
     try {
       StringBuffer planStr = new StringBuffer("In-memory Plan: ");
       planStr.append("Parent Queue: ").append(queueName)
-          .append("Total Capacity: ").append(totalCapacity).append("Step: ")
+          .append("Total Capacity: ").append(getTotalCapacity()).append("Step: ")
           .append(step);
       for (ReservationAllocation reservation : getAllReservations()) {
         planStr.append(reservation);
@@ -525,4 +549,17 @@ class InMemoryPlan implements Plan {
     }
   }
 
+  @Override
+  public void setTotalCapacity(List<RMNodeLabel> capacities) {
+    writeLock.lock();
+    try {
+      totalCapacities = new HashMap<String, RMNodeLabel>();
+      for(RMNodeLabel label : capacities){
+        totalCapacities.put(label.getLabelName(), label);
+      }
+    } finally {
+      writeLock.unlock();
+    }
+  }
+  
 }

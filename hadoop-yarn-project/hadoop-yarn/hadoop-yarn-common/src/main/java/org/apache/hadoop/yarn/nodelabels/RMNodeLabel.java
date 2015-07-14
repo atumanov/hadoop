@@ -45,7 +45,7 @@ public class RMNodeLabel implements Comparable<RMNodeLabel> {
         NodeLabel.DEFAULT_NODE_LABEL_EXCLUSIVITY);
   }
   
-  protected RMNodeLabel(String labelName, Resource res, int activeNMs,
+  public RMNodeLabel(String labelName, Resource res, int activeNMs,
       boolean exclusive) {
     this.labelName = labelName;
     this.resource = res;
@@ -81,6 +81,10 @@ public class RMNodeLabel implements Comparable<RMNodeLabel> {
     return this.resource;
   }
 
+  public void setResource(Resource resource) {
+    this.resource = resource;    
+  }
+  
   public int getNumActiveNMs() {
     return numActiveNMs;
   }
@@ -135,4 +139,6 @@ public class RMNodeLabel implements Comparable<RMNodeLabel> {
     return (int) ((((long) labelName.hashCode() << 8)
         + (resource.hashCode() << 4) + numActiveNMs) % prime);
   }
+
+
 }
