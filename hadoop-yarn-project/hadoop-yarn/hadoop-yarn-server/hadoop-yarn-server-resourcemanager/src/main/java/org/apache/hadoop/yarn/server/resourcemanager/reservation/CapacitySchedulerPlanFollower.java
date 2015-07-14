@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -144,11 +145,20 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
     }
   }
 
+  // TODO(atumanov): abscap per label (from QueueCapacities) x Resource per label (labelManager)
   @Override
   protected Resource getPlanResources(
       Plan plan, Queue queue, Resource clusterResources) {
     PlanQueue planQueue = (PlanQueue)queue;
+    // get absolute capacity per label for all labels
     float planAbsCap = planQueue.getAbsoluteCapacity();
+    Set<String> qcaplabels = planQueue.getQueueCapacities().getExistingNodeLabels();
+    for (String l : qcaplabels) {
+      // CONTINUE HERE: construct capacities by label
+      float foo = planQueue.getQueueCapacities().getAbsoluteCapacity(l);
+    }
+    
+    
     Resource planResources = Resources.multiply(clusterResources, planAbsCap);
     plan.setTotalCapacity(planResources);
     return planResources;

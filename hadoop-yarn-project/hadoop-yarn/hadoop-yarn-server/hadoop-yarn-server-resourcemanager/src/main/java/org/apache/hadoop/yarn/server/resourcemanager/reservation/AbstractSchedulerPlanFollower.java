@@ -22,6 +22,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -36,8 +37,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
@@ -85,17 +88,23 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
 
     // first we publish to the plan the current availability of resources
     // TODO(atumanov): cluster resource availability should be changed to be per label
+    //      get it from RMNodeLabelsManager::pullRMNodeLabelsInfo()
     // CONTINUE HERE
     // expect : Map<String, Resource> clusterResourceMap = scheduler.getClusterResource();
+    
     Resource clusterResources = scheduler.getClusterResource();
     Resource planResources = getPlanResources(plan, planQueue, clusterResources);
 
-    // TODO(atumanov): ReservationAllocations returned in a map
-    // expect: Map<String, Set<ReservationAllocation>> curResMap
     Set<ReservationAllocation> currentReservations =
         plan.getReservationsAtTime(now);
+    // TODO(atumanov): ReservationAllocations returned in a map
+    // expect: Map<String, Set<ReservationAllocation>> curResMap
+    // for now : construct this map after the call
+    Map<String, Set<ReservationAllocation>> curResMap = new HashMap<String, Set<ReservationAllocation>>();
+    curResMap.put(CommonNodeLabelsManager.NO_LABEL, currentReservations);
     Set<String> curReservationNames = new HashSet<String>();
     Resource reservedResources = Resource.newInstance(0, 0);
+    // curReservationNames is populated with names of current reservations as a side-effect 
     int numRes = getReservedResources(now, currentReservations,
         curReservationNames, reservedResources);
 
@@ -106,13 +115,18 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
         defReservationId);
     createDefaultReservationQueue(planQueueName, planQueue,
         defReservationId);
+    // XXX: what if the default queue already exists???
     curReservationNames.add(defReservationId);
 
-    // if the resources dedicated to this plan has shrunk invoke replanner
+    // if the resources dedicated to this plan shrunk, invoke replanner
+    // TODO: arePlanResourcesLessThanReservations --> change to do this per partition
+    // clusterResources and planResources must both be per partition
     if (arePlanResourcesLessThanReservations(clusterResources, planResources,
         reservedResources)) {
       try {
         plan.getReplanner().plan(plan, null);
+        // TODO(atumanov) : duplicate the code querying the plan data structs, 
+        // reconstruct curReservationNames
       } catch (PlanningException e) {
         LOG.warn("Exception while trying to replan: {}", planQueueName, e);
       }
