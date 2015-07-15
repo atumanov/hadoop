@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -40,8 +41,8 @@ class InMemoryReservationAllocation implements ReservationAllocation {
   private final ReservationId reservationID;
   private final String user;
   private final ReservationDefinition contract;
-  private final long startTime;
-  private final long endTime;
+  protected long startTime;
+  protected long endTime;
   private Map<ReservationInterval, ReservationRequest> allocationRequests;
   private boolean hasGang = false;
   private long acceptedAt = -1;
@@ -95,12 +96,40 @@ class InMemoryReservationAllocation implements ReservationAllocation {
 
   @Override
   public long getStartTime() {
-    return startTime;
+    return getStartTime(RMNodeLabelsManager.NO_LABEL);
   }
 
   @Override
   public long getEndTime() {
-    return endTime;
+    return getEndTime(RMNodeLabelsManager.NO_LABEL);
+  }
+  
+  @Override
+  public long getStartTime(String label) {
+    if(nodeLabel.equals(label)){
+      return startTime;
+    } else {
+      return -1;
+    }
+  }
+
+  @Override
+  public long getEndTime(String label) {
+    if(nodeLabel.equals(label)){
+      return endTime;
+    } else {
+      return -1;
+    }
+  }
+  
+  @Override
+  public void setStartTime(long startTime) {
+    this.startTime = startTime;
+  }
+
+  @Override
+  public void setEndTime(long endTime) {
+    this.endTime = endTime;
   }
 
   @Override
@@ -149,9 +178,9 @@ class InMemoryReservationAllocation implements ReservationAllocation {
   @Override
   public String toString() {
     StringBuilder sBuf = new StringBuilder();
-    sBuf.append(getReservationId()).append(" user:").append(getUser())
-        .append(" startTime: ").append(getStartTime()).append(" endTime: ")
-        .append(getEndTime()).append(" alloc:[")
+    sBuf.append(getReservationId()).append(" label:").append(getNodeLabels().get(0)).append(" user:").append(getUser())
+        .append(" startTime: ").append(getStartTime(nodeLabel)).append(" endTime: ")
+        .append(getEndTime(nodeLabel)).append(" alloc:[")
         .append(resourcesOverTime.toString()).append("] ");
     return sBuf.toString();
   }
@@ -205,8 +234,8 @@ class InMemoryReservationAllocation implements ReservationAllocation {
   }
 
   @Override
-  public Set<String> getNodeLabels() {
-    return Collections.singleton(nodeLabel);
+  public List<String> getNodeLabels() {
+    return Collections.singletonList(nodeLabel);
   }
 
 }

@@ -58,7 +58,7 @@ public interface PlanView extends PlanContext {
 
   /**
    * Returns the total {@link Resource} reserved for all users at the specified
-   * time
+   * time for the NO_LABEL label
    * 
    * @param tick the time (UTC in ms) for which the reserved resources are
    *          requested
@@ -66,6 +66,18 @@ public interface PlanView extends PlanContext {
    *         time
    */
   public Resource getTotalCommittedResources(long tick);
+
+  
+  /**
+   * Returns the total {@link Resource} reserved for all users at the specified
+   * time for a specified label
+   * 
+   * @param tick the time (UTC in ms) for which the reserved resources are
+   *          requested
+   * @return the total {@link Resource} reserved for all users at the specified
+   *         time
+   */
+  Resource getTotalCommittedResources(long t, String nodeLabel);
 
   /**
    * Returns the total {@link Resource} reserved for a given user at the
@@ -97,20 +109,34 @@ public interface PlanView extends PlanContext {
    * @return
    */
   public Resource getTotalCapacity(String nodeLabel);
+
   /**
-   * Gets the time (UTC in ms) at which the first reservation starts
+   * Gets the time (UTC in ms) at which the first reservation without a label starts
    * 
    * @return the time (UTC in ms) at which the first reservation starts
    */
   public long getEarliestStartTime();
 
   /**
-   * Returns the time (UTC in ms) at which the last reservation terminates
+   * Returns the time (UTC in ms) at which the last reservation without a labelterminates
    * 
    * @return the time (UTC in ms) at which the last reservation terminates
    */
   public long getLastEndTime();
 
+  /**
+   * Gets the time (UTC in ms) at which the first reservation with the given label starts
+   * 
+   * @return the time (UTC in ms) at which the first reservation starts
+   */
+  public long getEarliestStartTime(String nodeLabel);
+
+  /**
+   * Returns the time (UTC in ms) at which the last reservation the given label terminates
+   * 
+   * @return the time (UTC in ms) at which the last reservation terminates
+   */
+  public long getLastEndTime(String nodeLabel);
   
 
 }
