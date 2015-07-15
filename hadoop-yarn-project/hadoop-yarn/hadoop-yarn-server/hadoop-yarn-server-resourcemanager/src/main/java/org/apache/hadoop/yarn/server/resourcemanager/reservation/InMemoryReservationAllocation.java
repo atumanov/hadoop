@@ -19,11 +19,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -40,17 +42,27 @@ class InMemoryReservationAllocation implements ReservationAllocation {
   private final ReservationDefinition contract;
   private final long startTime;
   private final long endTime;
-  private final Map<ReservationInterval, ReservationRequest> allocationRequests;
+  private Map<ReservationInterval, ReservationRequest> allocationRequests;
   private boolean hasGang = false;
   private long acceptedAt = -1;
+  private final String nodeLabel;
 
-  private RLESparseResourceAllocation resourcesOverTime;
+  protected RLESparseResourceAllocation resourcesOverTime;
 
   InMemoryReservationAllocation(ReservationId reservationID,
       ReservationDefinition contract, String user, String planName,
       long startTime, long endTime,
       Map<ReservationInterval, ReservationRequest> allocationRequests,
       ResourceCalculator calculator, Resource minAlloc) {
+    this(reservationID, contract, user, planName, startTime, endTime,
+        allocationRequests, calculator, minAlloc, RMNodeLabelsManager.NO_LABEL);    
+  }
+  
+  InMemoryReservationAllocation(ReservationId reservationID,
+      ReservationDefinition contract, String user, String planName,
+      long startTime, long endTime,
+      Map<ReservationInterval, ReservationRequest> allocationRequests,
+      ResourceCalculator calculator, Resource minAlloc, String nodeLabel) {
     this.contract = contract;
     this.startTime = startTime;
     this.endTime = endTime;
@@ -59,11 +71,14 @@ class InMemoryReservationAllocation implements ReservationAllocation {
     this.allocationRequests = allocationRequests;
     this.planName = planName;
     resourcesOverTime = new RLESparseResourceAllocation(calculator, minAlloc);
-    for (Map.Entry<ReservationInterval, ReservationRequest> r : allocationRequests
-        .entrySet()) {
-      resourcesOverTime.addInterval(r.getKey(), r.getValue());
-      if (r.getValue().getConcurrency() > 1) {
-        hasGang = true;
+    this.nodeLabel = nodeLabel;
+    if(allocationRequests!=null){
+      for (Map.Entry<ReservationInterval, ReservationRequest> r : allocationRequests
+          .entrySet()) {
+        resourcesOverTime.addInterval(r.getKey(), r.getValue());
+        if (r.getValue().getConcurrency() > 1) {
+          hasGang = true;
+        }
       }
     }
   }
@@ -102,7 +117,12 @@ class InMemoryReservationAllocation implements ReservationAllocation {
   public String getUser() {
     return user;
   }
-
+  
+  @Override
+  public void setHasGang(boolean hasGang) {
+   this.hasGang = hasGang; 
+  }
+  
   @Override
   public boolean containsGangs() {
     return hasGang;
@@ -163,6 +183,30 @@ class InMemoryReservationAllocation implements ReservationAllocation {
       return false;
     InMemoryReservationAllocation other = (InMemoryReservationAllocation) obj;
     return this.reservationID.equals(other.getReservationId());
+  }
+
+  @Override
+  public Resource getResourcesAtTime(long t, String nodeLabel) {
+    if(nodeLabel.equals(nodeLabel)){
+      return getResourcesAtTime(t);
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Map<ReservationInterval, ReservationRequest> getAllocationRequests(
+      String nodeLabel) {
+    if(nodeLabel.equals(nodeLabel)){
+      return getAllocationRequests();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Set<String> getNodeLabels() {
+    return Collections.singleton(nodeLabel);
   }
 
 }
