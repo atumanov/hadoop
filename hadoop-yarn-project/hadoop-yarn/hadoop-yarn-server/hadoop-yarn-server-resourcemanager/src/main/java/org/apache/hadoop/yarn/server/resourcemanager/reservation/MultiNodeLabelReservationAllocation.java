@@ -17,18 +17,20 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
 /**
- * An in memory implementation of a reservation allocation using the
- * {@link RLESparseResourceAllocation}
- * 
+ * This class represent a ReservationAllocation that spans multiple NodeLabels.
+ * To do so it contains multiple single-label ReservationAllocations
  */
 class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation {
 
@@ -58,17 +60,35 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
     return perLabelAllocations;
   }
 
-  public void setPerLabelAllocations(Map<String, ReservationAllocation> perLabelAllocations) {
+  public void setPerLabelAllocations(
+      Map<String, ReservationAllocation> perLabelAllocations) {
     this.perLabelAllocations = perLabelAllocations;
   }
 
   @Override
   public Map<ReservationInterval, ReservationRequest> getAllocationRequests() {
-    return null;
+    return getAllocationRequests(RMNodeLabelsManager.NO_LABEL);
   }
-  
+
   @Override
-  public Resource getResourcesAtTime(long t, String label){
+  public Resource getResourcesAtTime(long t, String label) {
     return perLabelAllocations.get(label).getResourcesAtTime(t);
   }
+
+  @Override
+  public Map<ReservationInterval, ReservationRequest> getAllocationRequests(
+      String nodeLabel) {
+    if (perLabelAllocations.containsKey(nodeLabel)) {
+      return perLabelAllocations.get(nodeLabel)
+          .getAllocationRequests(nodeLabel);
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Set<String> getNodeLabels() {
+    return Collections.unmodifiableSet(perLabelAllocations.keySet());
+  }
+
 }

@@ -90,6 +90,14 @@ public interface PlanView extends PlanContext {
   public Resource getTotalCapacity();
 
   /**
+   * Returns the overall capacity in terms of {@link Resource} assigned to this
+   * plan for the given node label.
+   * 
+   * @param nodeLabel
+   * @return
+   */
+  public Resource getTotalCapacity(String nodeLabel);
+  /**
    * Gets the time (UTC in ms) at which the first reservation starts
    * 
    * @return the time (UTC in ms) at which the first reservation starts
@@ -102,5 +110,7 @@ public interface PlanView extends PlanContext {
    * @return the time (UTC in ms) at which the last reservation terminates
    */
   public long getLastEndTime();
+
+  
 
 }

@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -66,13 +68,30 @@ public interface ReservationAllocation extends
 
   /**
    * Returns the map of resources requested against the time interval for which
-   * they were
+   * they were allocated (for NO_LABEL resources).
    * 
    * @return the allocationRequests the map of resources requested against the
    *         time interval for which they were
    */
   public Map<ReservationInterval, ReservationRequest> getAllocationRequests();
+  
+  
+  /**
+   * Returns the map of resources requested against the time interval for which
+   * they were allocated for a given nodeLabel
+   * 
+   * @return the allocationRequests the map of resources requested against the
+   *         time interval for which they were
+   */
+  public Map<ReservationInterval, ReservationRequest> getAllocationRequests(String nodeLabel);
 
+  /**
+   * Return the list of all node labels this reservation is allocating against
+   * 
+   * @return list of node labels
+   */
+  public Set<String> getNodeLabels();
+  
   /**
    * Return a string identifying the plan to which the reservation belongs
    * 
