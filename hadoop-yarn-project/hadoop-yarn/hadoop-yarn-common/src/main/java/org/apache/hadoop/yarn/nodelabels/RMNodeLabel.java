@@ -82,9 +82,9 @@ public class RMNodeLabel implements Comparable<RMNodeLabel> {
   }
 
   public void setResource(Resource resource) {
-    this.resource = resource;    
+    this.resource = resource;
   }
-  
+
   public int getNumActiveNMs() {
     return numActiveNMs;
   }
@@ -139,6 +139,4 @@ public class RMNodeLabel implements Comparable<RMNodeLabel> {
     return (int) ((((long) labelName.hashCode() << 8)
         + (resource.hashCode() << 4) + numActiveNMs) % prime);
   }
-
-
 }
