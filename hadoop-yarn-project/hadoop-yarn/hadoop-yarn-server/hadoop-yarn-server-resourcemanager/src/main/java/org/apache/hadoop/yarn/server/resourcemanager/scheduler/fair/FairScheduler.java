@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.ContainersAndNMTokensAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
@@ -1640,8 +1641,11 @@ public class FairScheduler extends
 
   @Override
   public void setEntitlement(String queueName,
-      QueueEntitlement entitlement) throws YarnException {
+      QueueCapacities entitlement) throws YarnException {
 
+    
+    //TODO VERIFY THIS WORKS GIVEN NodeLabel changes
+    
     FSLeafQueue reservationQueue = queueMgr.getLeafQueue(queueName, false);
     if (reservationQueue == null) {
       throw new YarnException("Target queue " + queueName
@@ -1677,5 +1681,10 @@ public class FairScheduler extends
       targetQueueName = getDefaultQueueForPlanQueue(targetQueueName);
     }
     return targetQueueName;
+  }
+
+  @Override
+  public RMContext getRMContext() {
+    return rmContext;
   }
 }

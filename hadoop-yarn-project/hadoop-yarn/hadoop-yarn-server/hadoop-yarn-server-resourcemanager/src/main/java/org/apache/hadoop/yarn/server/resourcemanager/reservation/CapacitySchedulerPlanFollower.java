@@ -20,18 +20,22 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ReservationQueue;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -89,10 +93,29 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
         clusterResources, reservationResources, planResources);
   }
 
+  protected boolean arePlanResourcesLessThanReservations(
+      Map<String,Resource> clusterResources, 
+      Map<String,Resource> planResources,
+      Map<String,Resource> reservedResources) {
+    
+    for (String l: planResources.keySet()) {
+      boolean nlGreater = Resources.greaterThan(cs.getResourceCalculator(),
+          clusterResources.get(l), reservedResources.get(l), planResources.get(l));
+      if (!nlGreater)
+        return false;
+    }
+    
+    return true;
+//    return Resources.greaterThan(cs.getResourceCalculator(),
+//        clusterResources, reservedResources, planResources);
+  }
+  
   @Override
   protected boolean arePlanResourcesLessThanReservations(
       Resource clusterResources, Resource planResources,
       Resource reservedResources) {
+    // TODO: invoke by label
+    
     return Resources.greaterThan(cs.getResourceCalculator(),
         clusterResources, reservedResources, planResources);
   }
@@ -146,21 +169,42 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
   }
 
   // TODO(atumanov): abscap per label (from QueueCapacities) x Resource per label (labelManager)
+  /**
+   * 
+   * @param plan - Reservation plan
+   * @param queue - Reservation queue
+   * @param nlclusterResources
+   * @return Map<String, Resources> -- a set of resources consumed by the plan
+   * per label
+   * side-effect : also propagates absolute queue capacity to the plan
+   */
   @Override
-  protected Resource getPlanResources(
-      Plan plan, Queue queue, Resource clusterResources) {
+  protected Map<String, Resource> getPlanResources(
+      Plan plan, Queue queue, List<RMNodeLabel> rmNodeLabelList) {
+    // return val
+    Map<String, Resource> planResources = new HashMap<String, Resource>();
     PlanQueue planQueue = (PlanQueue)queue;
-    // get absolute capacity per label for all labels
-    float planAbsCap = planQueue.getAbsoluteCapacity();
-    Set<String> qcaplabels = planQueue.getQueueCapacities().getExistingNodeLabels();
-    for (String l : qcaplabels) {
-      // CONTINUE HERE: construct capacities by label
-      float foo = planQueue.getQueueCapacities().getAbsoluteCapacity(l);
+    QueueCapacities qcap = planQueue.getQueueCapacities();
+    Set<String> qcaplabels = qcap.getExistingNodeLabels();
+    // make a single pass through list -- create an aux lookup table
+    Map<String, RMNodeLabel> rmNodeLabelMap = new HashMap<String, RMNodeLabel>();
+    for (RMNodeLabel rmnl: rmNodeLabelList) {
+      rmNodeLabelMap.put(rmnl.getLabelName(), rmnl);
     }
+    // XXX: continue here after visit to Carlo's cube
     
-    
-    Resource planResources = Resources.multiply(clusterResources, planAbsCap);
-    plan.setTotalCapacity(planResources);
+    // get absolute queue capacity vector
+    // float planAbsCap = planQueue.getAbsoluteCapacity();
+    for (String l : qcaplabels) { // for each plan queue label
+      // look up its absolute capacity in the queue
+      float abscap = qcap.getAbsoluteCapacity(l);
+      // TODO: handle absence of queue label in cluster labels...
+      Resource labelRes = Resources.multiply(nlclusterResources.get(l), abscap);
+      planResources.put(l, labelRes);
+    }
+    //Resource planResources = Resources.multiply(clusterResources, planAbsCap);
+    // TODO: move total capacity setting out?
+    plan.setTotalCapacity(planResources); // Map<String, RMNodeLabel>
     return planResources;
   }
 

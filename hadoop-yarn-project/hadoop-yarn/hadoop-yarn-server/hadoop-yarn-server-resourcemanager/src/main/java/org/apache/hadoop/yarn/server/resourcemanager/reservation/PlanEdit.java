@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import java.util.Map;
+
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
@@ -71,9 +73,9 @@ public interface PlanEdit extends PlanContext, PlanView {
    * Sets the overall capacity in terms of {@link Resource} assigned to this
    * plan
    * 
-   * @param capacity the overall capacity in terms of {@link Resource} assigned
+   * @param planResources the overall capacity in terms of {@link Resource} assigned
    *          to this plan
    */
-  public void setTotalCapacity(Resource capacity);
+  public void setTotalCapacity(Map<String, Resource> planResources);
 
 }

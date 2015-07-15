@@ -33,6 +33,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.util.Clock;
@@ -446,10 +447,12 @@ class InMemoryPlan implements Plan {
   }
 
   @Override
-  public void setTotalCapacity(Resource cap) {
+  public void setTotalCapacity(Map<String, Resource> cap) {
     writeLock.lock();
     try {
-      totalCapacity = Resources.clone(cap);
+      // TODO: unroll the capacity vector into internal data structs
+      // for now, just setting capacity for the default label (back-compat)
+      totalCapacity = Resources.clone(cap.get(CommonNodeLabelsManager.NO_LABEL));
     } finally {
       writeLock.unlock();
     }
