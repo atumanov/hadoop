@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
-import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -85,6 +85,6 @@ public interface PlanEdit extends PlanContext, PlanView {
    * @param capacities list of per-node-label {@link Resource} assigned
    *          to this plan
    */
-  public void setTotalCapacity(List<RMNodeLabel> capacities);
+  public void setTotalCapacity(Map<String, RMNodeLabel> capacities);
 
 }

@@ -95,6 +95,12 @@ public interface ReservationAllocation extends
   public boolean containsGangs();
 
   /**
+   * Set whether any of the stages in this reservation has gang semantics
+   * @param hasGang
+   */
+  public void setHasGang(boolean hasGang);
+
+  /**
    * Sets the time at which the reservation was accepted by the system
    * 
    * @param acceptedAt the time at which the reservation was accepted by the
@@ -118,5 +124,18 @@ public interface ReservationAllocation extends
    * @return the resources reserved at the specified time
    */
   public Resource getResourcesAtTime(long tick);
+
+  /**
+   * Returns the capacity represented by cumulative resources reserved by the
+   * reservation at the specified point of time on a specific node label
+   * 
+   * @param tick the time (UTC in ms) for which the reserved resources are
+   *          requested
+   * @param label the node label we are referring to         
+   * @return the resources reserved at the specified time/label
+   */  
+  public Resource getResourcesAtTime(long t, String label);
+
+  
 
 }
