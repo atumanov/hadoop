@@ -837,6 +837,11 @@ final public class ResourceSchedulerWrapper
   public void setRMContext(RMContext rmContext) {
     scheduler.setRMContext(rmContext);
   }
+  
+  @Override
+  public RMContext getRMContext() {
+    return rmContext;
+  }
 
   @Override
   public void reinitialize(Configuration conf, RMContext rmContext)

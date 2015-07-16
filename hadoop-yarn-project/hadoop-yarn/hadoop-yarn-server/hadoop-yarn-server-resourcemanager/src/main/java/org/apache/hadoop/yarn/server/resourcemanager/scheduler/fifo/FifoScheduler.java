@@ -294,6 +294,11 @@ public class FifoScheduler extends
   public synchronized void setRMContext(RMContext rmContext) {
     this.rmContext = rmContext;
   }
+  
+  @Override
+  public RMContext getRMContext() {
+    return rmContext;
+  }
 
   @Override
   public synchronized void

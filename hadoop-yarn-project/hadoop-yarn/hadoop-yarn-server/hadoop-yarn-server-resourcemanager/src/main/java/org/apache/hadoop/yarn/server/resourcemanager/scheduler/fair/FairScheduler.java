@@ -1289,6 +1289,11 @@ public class FairScheduler extends
   public synchronized void setRMContext(RMContext rmContext) {
     this.rmContext = rmContext;
   }
+  
+  @Override
+  public RMContext getRMContext() {
+    return rmContext;
+  }
 
   private void initScheduler(Configuration conf) throws IOException {
     synchronized (this) {
@@ -1680,10 +1685,5 @@ public class FairScheduler extends
       targetQueueName = getDefaultQueueForPlanQueue(targetQueueName);
     }
     return targetQueueName;
-  }
-
-  @Override
-  public RMContext getRMContext() {
-    return rmContext;
   }
 }
