@@ -119,7 +119,7 @@ public class TestInMemoryPlanNodeLabel {
         allocations, resCalc, minAlloc, label1);
 
     int[] alloc2 = { 20, 20, 20};
-    int start2 = 200;
+    int start2 = 103;
     Map<ReservationInterval, ReservationRequest> allocations2 = generateAllocation(
         start2, alloc2, false);
     ReservationDefinition rDef2 = createSimpleReservationDefinition(start, start
@@ -145,16 +145,38 @@ public class TestInMemoryPlanNodeLabel {
     for (int i = 0; i < alloc.length; i++) {
       Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i])),
           plan.getTotalCommittedResources(start + i,label1));
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i])),
-          plan.getConsumptionForUser(user, start + i));
     }
     
     for (int i = 0; i < alloc2.length; i++) {
       Assert.assertEquals(Resource.newInstance(1024 * (alloc2[i]), (alloc2[i])),
           plan.getTotalCommittedResources(start2 + i,label2));
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc2[i]), (alloc2[i])),
-          plan.getConsumptionForUser(user, start2 + i));
     }
+    
+    for (int i = start; i < start + alloc2.length; i++) {
+      
+      if(i < start2){
+        Assert.assertEquals(Resource.newInstance(1024 * (alloc[i-start]), (alloc[i-start])),
+            plan.getTotalCommittedResources(i,label1 + " || " + label2));
+        Assert.assertEquals(Resource.newInstance(1024 * (alloc[i-start]), (alloc[i-start])),
+            plan.getConsumptionForUser(user,i));
+      }
+      if(i > start2 && i < start + alloc.length) {
+        Assert.assertEquals(Resource.newInstance(1024 * (alloc[i-start] + alloc[i-start2]), (alloc[i-start] + alloc[i-start2])),
+            plan.getTotalCommittedResources(i,label1 + " || " + label2));
+        Assert.assertEquals(Resource.newInstance(1024 * (alloc[i-start] + alloc[i-start2]), (alloc[i-start] + alloc[i-start2])),
+            plan.getConsumptionForUser(user, i));
+      }
+      if(i > start + alloc.length){
+        Assert.assertEquals(Resource.newInstance(1024 * (alloc2[i-start2]), (alloc2[i-start2])),
+            plan.getTotalCommittedResources(i,label1 + " || " + label2));
+        Assert.assertEquals(Resource.newInstance(1024 * (alloc2[i]), (alloc2[i])),
+            plan.getConsumptionForUser(user, i));
+      }
+      
+      
+
+    }
+    
   }
 
   private void doAssertions(Plan plan, ReservationAllocation rAllocation) {

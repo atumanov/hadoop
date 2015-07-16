@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -453,15 +454,50 @@ class InMemoryPlan implements Plan {
   }
   
   @Override
-  public Resource getTotalCommittedResources(long t, String nodeLabel) {
+  public Resource getTotalCommittedResources(long t, String nodeLabelExpression) {
     readLock.lock();
     try {
-      return perLabelResourceUtilization.get(nodeLabel).getCapacityAtTime(t);
+      Set<String> matchingNodeLabelPartitions = findMatchingPartitions(nodeLabelExpression);
+      Resource total = Resource.newInstance(0, 0);
+      for (String label : matchingNodeLabelPartitions) {
+        Resources.addTo(total, perLabelResourceUtilization.get(label)
+            .getCapacityAtTime(t));
+      }
+      return total;
     } finally {
       readLock.unlock();
     }
   }
   
+  // NOTE: this makes sense because the totalCapacities are expressed on
+  // "partitions" of the cluster i.e., if there are two labels GPU and PUB-IP we
+  // will have exploded the cluster in the 4 basic partitions GPU_AND_PUB-IP,
+  // GPU_AND_NO-PUBIP, NO-GPU_AND_PUBIP, NO-GPU_AND_NO-PUBIP, thus every desired
+  // subset is expressible as an OR of this partitions.
+  private Set<String> findMatchingPartitions(String nodeLabelExpression) {
+
+    Set<String> matchingPartitions = new HashSet<String>();
+
+    Set<String> partitionsInExpression = new HashSet<String>();
+
+    if (nodeLabelExpression.contains("||")) {
+      String[] portionsOfExpression = nodeLabelExpression.split("\\|\\|");
+      for(String s:portionsOfExpression){
+        partitionsInExpression.add(s.trim());
+      }
+    } else {
+      partitionsInExpression.add(nodeLabelExpression);
+    }
+
+    for (String partition : partitionsInExpression) {
+      if (totalCapacities.containsKey(partition)) {
+        matchingPartitions.add(partition);
+      }
+    }
+
+    return matchingPartitions;
+  }
+
   @Override
   public ReservationAllocation getReservationById(ReservationId reservationID) {
     if (reservationID == null) {
