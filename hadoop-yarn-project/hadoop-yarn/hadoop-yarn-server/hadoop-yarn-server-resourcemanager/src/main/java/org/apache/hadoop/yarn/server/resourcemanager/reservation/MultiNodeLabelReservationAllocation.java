@@ -17,9 +17,10 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -38,14 +39,15 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
 
   public MultiNodeLabelReservationAllocation(ReservationId reservationID,
       ReservationDefinition contract, String user, String planName,
-      long startTime, long endTime,
       Map<String, ReservationAllocation> perLabelAllocations,
-      ResourceCalculator calculator, Resource minAlloc, String nodeLabel) {
-    super(reservationID, contract, user, planName, startTime, endTime, null,
-        calculator, minAlloc);
+      ResourceCalculator calculator, Resource minAlloc) {
+    super(reservationID, contract, user, planName, Long.MAX_VALUE,
+        Long.MIN_VALUE, null, calculator, minAlloc);
     this.perLabelAllocations = perLabelAllocations;
 
     for (ReservationAllocation r : perLabelAllocations.values()) {
+      setStartTime(Math.min(this.startTime, r.getStartTime(r.getNodeLabels().get(0))));
+      setEndTime(Math.max(this.endTime, r.getEndTime(r.getNodeLabels().get(0))));
       if (r.containsGangs()) {
         this.setHasGang(true);
       }
@@ -87,8 +89,37 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
   }
 
   @Override
-  public Set<String> getNodeLabels() {
-    return Collections.unmodifiableSet(perLabelAllocations.keySet());
+  public List<String> getNodeLabels() {
+    List<String> list = new ArrayList<String>();
+    list.addAll(perLabelAllocations.keySet());
+    return Collections.unmodifiableList(list);
+  }
+
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    for (Map.Entry<String, ReservationAllocation> e : perLabelAllocations
+        .entrySet()) {
+      sb.append(e.getKey() + " = " + e.getValue());
+    }
+    return sb.toString();
+  }
+  
+  @Override
+  public long getStartTime(String label) {
+    if(perLabelAllocations.containsKey(label)){
+      return perLabelAllocations.get(label).getStartTime(label);
+    } else {
+      return -1;
+    }
+  }
+
+  @Override
+  public long getEndTime(String label) {
+    if(perLabelAllocations.containsKey(label)){
+      return perLabelAllocations.get(label).getEndTime(label);
+    } else {
+      return -1;
+    }
   }
 
 }

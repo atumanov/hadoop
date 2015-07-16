@@ -114,14 +114,15 @@ class InMemoryPlan implements Plan {
     this.maxAlloc = maxAlloc;
     this.globalResourceUtilization = new RLESparseResourceAllocation(resCalc,
         minAlloc);
-    this.perLabelResourceUtilization = Collections.singletonMap(NOLABEL,
-        new RLESparseResourceAllocation(resCalc, minAlloc));
+    this.perLabelResourceUtilization = new HashMap<String, RLESparseResourceAllocation>();
+    perLabelResourceUtilization.put(NOLABEL, new RLESparseResourceAllocation(
+        resCalc, minAlloc));
     this.queueName = queueName;
     this.replanner = replanner;
     this.getMoveOnExpiry = getMoveOnExpiry;
     this.clock = clock;
   }
-  
+
   @Override
   public QueueMetrics getQueueMetrics() {
     return queueMetrics;
@@ -169,7 +170,8 @@ class InMemoryPlan implements Plan {
       if (resAlloc.isEmpty()) {
         perUserResourceUtilization.remove(user);
       }
-      if(perLabelResourceUtilization.get(nodeLabel).isEmpty()){
+      if(!RMNodeLabelsManager.NO_LABEL.equals(nodeLabel) && 
+          perLabelResourceUtilization.get(nodeLabel).isEmpty()){
         perLabelResourceUtilization.remove(nodeLabel);
       }
     }
@@ -444,12 +446,22 @@ class InMemoryPlan implements Plan {
   public Resource getTotalCommittedResources(long t) {
     readLock.lock();
     try {
-      return perLabelResourceUtilization.get(NOLABEL).getCapacityAtTime(t);
+      return getTotalCommittedResources(t,NOLABEL);
     } finally {
       readLock.unlock();
     }
   }
-
+  
+  @Override
+  public Resource getTotalCommittedResources(long t, String nodeLabel) {
+    readLock.lock();
+    try {
+      return perLabelResourceUtilization.get(nodeLabel).getCapacityAtTime(t);
+    } finally {
+      readLock.unlock();
+    }
+  }
+  
   @Override
   public ReservationAllocation getReservationById(ReservationId reservationID) {
     if (reservationID == null) {
@@ -512,10 +524,11 @@ class InMemoryPlan implements Plan {
     }
   }
 
+  @Override
   public long getEarliestStartTime() {
     readLock.lock();
-    try {
-      return perLabelResourceUtilization.get(NOLABEL).getEarliestStartTime();
+    try{
+      return getEarliestStartTime(NOLABEL);
     } finally {
       readLock.unlock();
     }
@@ -524,13 +537,35 @@ class InMemoryPlan implements Plan {
   @Override
   public long getLastEndTime() {
     readLock.lock();
-    try {
-      return perLabelResourceUtilization.get(NOLABEL).getLatestEndTime();
+    try{
+      return getLastEndTime(NOLABEL);
     } finally {
       readLock.unlock();
     }
   }
 
+  @Override
+  public long getEarliestStartTime(String label) {
+    readLock.lock();
+    try {
+      return perLabelResourceUtilization.get(label).getEarliestStartTime();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public long getLastEndTime(String label) {
+    readLock.lock();
+    try {
+      return perLabelResourceUtilization.get(label).getLatestEndTime();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  
+  
   @Override
   public ResourceCalculator getResourceCalculator() {
     return resCalc;

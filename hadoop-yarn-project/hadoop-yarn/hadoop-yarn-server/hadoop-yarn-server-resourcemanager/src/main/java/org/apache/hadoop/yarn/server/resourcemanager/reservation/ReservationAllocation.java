@@ -65,6 +65,39 @@ public interface ReservationAllocation extends
    * @return the time at which the reservation terminates
    */
   public long getEndTime();
+  
+  /**
+   * Returns the time at which the reservation is activated for this label
+   * 
+   * @param label
+   * @return the time at which the reservation is activated
+   */
+  public long getStartTime(String label);
+
+  /**
+   * Returns the time at which the reservation terminates for this label
+   * 
+   * @param label
+   * @return the time at which the reservation terminates
+   */
+  public long getEndTime(String label);
+  
+
+  /**
+   * Set the time at which the reservation is activated
+   * 
+   * @param the time at which the reservation is activated
+   */
+
+  public void setStartTime(long startTime);
+
+  /**
+   * Set the time at which the reservation terminates
+   * 
+   * @param the time at which the reservation terminates
+   */
+
+  public void setEndTime(long endTime);
 
   /**
    * Returns the map of resources requested against the time interval for which
@@ -90,7 +123,7 @@ public interface ReservationAllocation extends
    * 
    * @return list of node labels
    */
-  public Set<String> getNodeLabels();
+  public List<String> getNodeLabels();
   
   /**
    * Return a string identifying the plan to which the reservation belongs
@@ -154,6 +187,7 @@ public interface ReservationAllocation extends
    * @return the resources reserved at the specified time/label
    */  
   public Resource getResourcesAtTime(long t, String label);
+  
 
   
 
