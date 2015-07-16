@@ -158,17 +158,23 @@ public class TestInMemoryPlanNodeLabel {
         Assert.assertEquals(Resource.newInstance(1024 * (alloc[i-start]), (alloc[i-start])),
             plan.getTotalCommittedResources(i,label1 + " || " + label2));
         Assert.assertEquals(Resource.newInstance(1024 * (alloc[i-start]), (alloc[i-start])),
+            plan.getTotalCommittedResources(i,label1 + " OR " + label2));
+        Assert.assertEquals(Resource.newInstance(1024 * (alloc[i-start]), (alloc[i-start])),
             plan.getConsumptionForUser(user,i));
       }
       if(i > start2 && i < start + alloc.length) {
         Assert.assertEquals(Resource.newInstance(1024 * (alloc[i-start] + alloc[i-start2]), (alloc[i-start] + alloc[i-start2])),
             plan.getTotalCommittedResources(i,label1 + " || " + label2));
         Assert.assertEquals(Resource.newInstance(1024 * (alloc[i-start] + alloc[i-start2]), (alloc[i-start] + alloc[i-start2])),
+            plan.getTotalCommittedResources(i,label1 + " OR " + label2));
+        Assert.assertEquals(Resource.newInstance(1024 * (alloc[i-start] + alloc[i-start2]), (alloc[i-start] + alloc[i-start2])),
             plan.getConsumptionForUser(user, i));
       }
       if(i > start + alloc.length){
         Assert.assertEquals(Resource.newInstance(1024 * (alloc2[i-start2]), (alloc2[i-start2])),
             plan.getTotalCommittedResources(i,label1 + " || " + label2));
+        Assert.assertEquals(Resource.newInstance(1024 * (alloc2[i-start2]), (alloc2[i-start2])),
+            plan.getTotalCommittedResources(i,label1 + " OR " + label2));
         Assert.assertEquals(Resource.newInstance(1024 * (alloc2[i]), (alloc2[i])),
             plan.getConsumptionForUser(user, i));
       }

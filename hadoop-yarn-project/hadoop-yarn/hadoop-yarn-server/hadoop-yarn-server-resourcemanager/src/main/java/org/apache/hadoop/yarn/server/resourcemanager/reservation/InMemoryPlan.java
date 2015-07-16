@@ -480,12 +480,18 @@ class InMemoryPlan implements Plan {
 
     Set<String> partitionsInExpression = new HashSet<String>();
 
-    if (nodeLabelExpression.contains("||")) {
+    if (nodeLabelExpression.contains(" || ")) {
       String[] portionsOfExpression = nodeLabelExpression.split("\\|\\|");
       for(String s:portionsOfExpression){
         partitionsInExpression.add(s.trim());
       }
     } else {
+      if (nodeLabelExpression.contains(" OR ")) {
+        String[] portionsOfExpression = nodeLabelExpression.split(" OR ");
+        for(String s:portionsOfExpression){
+          partitionsInExpression.add(s.trim());
+        }
+      }
       partitionsInExpression.add(nodeLabelExpression);
     }
 
