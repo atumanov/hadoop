@@ -93,6 +93,7 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
         clusterResources, reservationResources, planResources);
   }
 
+  /*
   @Override
   protected boolean arePlanResourcesLessThanReservations(
       Map<String,Resource> clusterResources, 
@@ -108,17 +109,8 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
     }
     
     return true;
-//    return Resources.greaterThan(cs.getResourceCalculator(),
-//        clusterResources, reservedResources, planResources);
   }
-//  
-//  @Override
-//  protected boolean arePlanResourcesLessThanReservations(
-//      Resource clusterResources, Resource planResources,
-//      Resource reservedResources) {
-//    return Resources.greaterThan(cs.getResourceCalculator(),
-//        clusterResources, reservedResources, planResources);
-//  }
+  */
 
   @Override
   protected List<? extends Queue> getChildReservationQueues(Queue queue) {
@@ -179,7 +171,7 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
    * side-effect : also propagates absolute queue capacity to the plan
    */
   @Override
-  protected Map<String, RMNodeLabel> getPlanResources(
+  protected Map<String, Resource> getPlanResources(
       Plan plan, Queue queue, List<RMNodeLabel> rmNodeLabelList) {
 
     PlanQueue planQueue = (PlanQueue)queue;
@@ -188,10 +180,10 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
     // create a lookup table mapping label strings to label objects for convenience.
     Map<String, RMNodeLabel> rmNodeLabelMap = new HashMap<String, RMNodeLabel>();
     Map<String, RMNodeLabel> planqNodeLabelMap = new HashMap<String, RMNodeLabel>();
+    Map<String, Resource> planqNodeLabelResources = new HashMap<String, Resource>();
     for (RMNodeLabel rmnl: rmNodeLabelList) {
       rmNodeLabelMap.put(rmnl.getLabelName(), rmnl);
     }
-
     // get absolute queue capacity vector
     // float planAbsCap = planQueue.getAbsoluteCapacity();
     // Iterate over all plan queue labels. For each label, calculate resource.
@@ -204,10 +196,10 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
       Resource labelRes = Resources.multiply(rmnl.getResource(), abscap);
       rmnl.setResource(labelRes); // is this necessary?
       planqNodeLabelMap.put(l, rmnl);
+      planqNodeLabelResources.put(l, rmnl.getResource());
     }
-    // TODO: move total capacity setting out?
     plan.setTotalCapacity(planqNodeLabelMap); // Map<String, RMNodeLabel>
-    return planqNodeLabelMap;
+    return planqNodeLabelResources; // Map<String, Resource>
   }
 
   @Override

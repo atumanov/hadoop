@@ -104,15 +104,6 @@ public class ReservationQueue extends LeafQueue {
 
     setMaxApplications((int) (maxSystemApps * totalAbsCap));
     
-//    //SET PER NODE LABEL
-//    setCapacity(capacity);
-//    setAbsoluteCapacity(getParent().getAbsoluteCapacity() * getCapacity());
-//
-//    //SET USING SUM OF ALL ABS CAPACITIES ACROSS ALL NODE LABELS
-//    setMaxApplications((int) (maxSystemApps * getAbsoluteCapacity()));
-//
-//    //SET PER NODE LABEL
-//    setMaxCapacity(entitlement.getMaxCapacity());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Queue" + this.getQueueName() + " successfully updated with "
     		  + " capacity " + entitlement.toString());

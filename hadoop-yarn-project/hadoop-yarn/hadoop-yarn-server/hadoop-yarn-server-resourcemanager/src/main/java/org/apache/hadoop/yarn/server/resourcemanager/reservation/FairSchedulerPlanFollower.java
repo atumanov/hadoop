@@ -19,10 +19,14 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
@@ -66,12 +70,21 @@ public class FairSchedulerPlanFollower extends AbstractSchedulerPlanFollower {
         clusterResources, capToAssign, planResources);
   }
 
+  /*
   @Override
-  protected boolean arePlanResourcesLessThanReservations(Resource
-      clusterResources, Resource planResources, Resource reservedResources) {
-    return Resources.greaterThan(fs.getResourceCalculator(),
-        clusterResources, reservedResources, planResources);
+  protected boolean arePlanResourcesLessThanReservations(
+      Map<String, Resource> clusterResources, 
+      Map<String, Resource> planResources, 
+      Map<String, Resource> reservedResources) {
+    for (String l: planResources.keySet()) {
+      boolean nlGreater = Resources.greaterThan(fs.getResourceCalculator(),
+          clusterResources.get(l), reservedResources.get(l), planResources.get(l));
+      if (!nlGreater)
+        return false;
+    }
+    return true;
   }
+  */
 
   @Override
   protected List<? extends Queue> getChildReservationQueues(Queue queue) {
@@ -99,11 +112,13 @@ public class FairSchedulerPlanFollower extends AbstractSchedulerPlanFollower {
   }
 
   @Override
-  protected Resource getPlanResources(Plan plan, Queue queue,
-      Resource clusterResources) {
+  protected Map<String, Resource> getPlanResources(
+      Plan plan, Queue queue, List<RMNodeLabel> rmNodeLabelList) {
     FSParentQueue planQueue = (FSParentQueue)queue;
     Resource planResources = planQueue.getSteadyFairShare();
-    return planResources;
+    Map<String, Resource> planqNodeLabelResources = 
+        Collections.singletonMap(CommonNodeLabelsManager.NO_LABEL, planResources);
+    return planqNodeLabelResources;
   }
 
   @Override

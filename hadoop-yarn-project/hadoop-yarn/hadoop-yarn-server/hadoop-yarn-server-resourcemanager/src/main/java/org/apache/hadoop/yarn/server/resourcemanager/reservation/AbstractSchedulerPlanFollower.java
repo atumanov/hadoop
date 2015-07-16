@@ -86,12 +86,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     Queue planQueue = getPlanQueue(planQueueName);
     if (planQueue == null) return;
 
-    // first we publish to the plan the current availability of resources
-    // TODO(atumanov): cluster resource availability should be changed to be per label
-    // expect : Map<String, Resource> clusterResourceMap = scheduler.getClusterResource();
-    
     // construct cluster resources by node label
-    // Resource clusterResources = scheduler.getClusterResource();
     // rmNodeLabelList,rmNodeLabelResources -- cluster-level information, NOT queue-level
     List<RMNodeLabel> rmNodeLabelList = scheduler.getRMContext()
         .getNodeLabelManager().pullRMNodeLabelsInfo();
@@ -102,13 +97,8 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
       reservedResources.put(rmnl.getLabelName(), Resource.newInstance(0,0));
     }
     // now get the amount of resources used by the current plan queue
-    // qNodeLabelMap,qNodeLabelResources -- queue-level information
-    Map<String, RMNodeLabel> qNodeLabelMap = getPlanResources(plan, planQueue, rmNodeLabelList);
-    Map<String, Resource> qNodeLabelResources = new HashMap<String, Resource>();
-    // construct a slightly different materialized view : labelString -> Resource
-    for (Map.Entry<String, RMNodeLabel> e : qNodeLabelMap.entrySet()) {
-      qNodeLabelResources.put(e.getKey(), e.getValue().getResource());
-    }
+    // qNodeLabelResources -- queue-level information
+    Map<String, Resource> qNodeLabelResources = getPlanResources(plan, planQueue, rmNodeLabelList);
 
     // currentReservations is a collection of label-aware reservations active now.
     // Each such reservation allocation contains skyline accounting per label.
@@ -136,8 +126,6 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     curReservationNames.add(defReservationId);
 
     // if the resources dedicated to this plan shrunk, invoke replanner
-    // TODO: arePlanResourcesLessThanReservations --> change to do this per partition
-    // clusterResources and planResources must both be per partition
     if (arePlanResourcesLessThanReservations(rmNodeLabelResources, qNodeLabelResources,
         reservedResources)) {
       try {
@@ -152,6 +140,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     // have to be activated
     List<? extends Queue> resQueues = getChildReservationQueues(planQueue);
     Set<String> expired = new HashSet<String>();
+    Set<Queue> resQueuesExpired = new HashSet<Queue>();
     for (Queue resQueue : resQueues) {
       String resQueueName = resQueue.getQueueName();
       String reservationId = getReservationIdFromQueueName(resQueueName);
@@ -162,10 +151,11 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
       } else {
         // the reservation has termination, mark for cleanup
         expired.add(reservationId); // no longer exists
+        resQueuesExpired.add(resQueue);
       }
     }
     // garbage collect expired reservations
-    cleanupExpiredQueues(planQueueName, plan.getMoveOnExpiry(), expired,
+    cleanupExpiredQueues(planQueueName, plan.getMoveOnExpiry(), resQueuesExpired,
         defReservationQueue);
 
     // Algorithm:
@@ -320,17 +310,22 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
    * any apps (if move is disabled or move failed) and removing the queue
    */
   protected void cleanupExpiredQueues(String planQueueName,
-      boolean shouldMove, Set<String> toRemove, String defReservationQueue) {
-    for (String expiredReservationId : toRemove) {
+      boolean shouldMove, Set<Queue> toRemove, String defReservationQueue) {
+    // reduce entitlement to 0 for all labels of this queue
+    for (Queue q: toRemove) {
+      String expiredReservationId = getReservationIdFromQueueName(q.getQueueName());
+      // construct an entitlement object encapsulating all labels for this queue
+      QueueCapacities zeroqCap = new QueueCapacities(false);
+      for (String label : q.getAccessibleNodeLabels()) {
+        zeroqCap.setCapacity(label, 0f);
+        zeroqCap.setMaximumCapacity(label, 0f);
+      }
+      
       try {
-        // TODO: labelify -- reduce entitlement to 0 for all labels of this queue
-        // reduce entitlement to 0
+        // set entitlement generically
         String expiredReservation = getReservationQueueName(planQueueName,
             expiredReservationId);
-        QueueCapacities newcap = new QueueCapacities(false);
-        newcap.setCapacity(0.0f);
-        newcap.setMaximumCapacity(0.0f);
-        setQueueEntitlement(planQueueName, expiredReservation, newcap);
+        setQueueEntitlement(planQueueName, expiredReservation, zeroqCap);
         if (shouldMove) {
           moveAppsInQueueSync(expiredReservation, defReservationQueue);
         }
@@ -446,10 +441,18 @@ return numRes;
   /**
    * Check if plan resources are less than expected reservation resources
    */
-  protected abstract boolean arePlanResourcesLessThanReservations(
+  protected boolean arePlanResourcesLessThanReservations(
       Map<String, Resource> clusterResources, 
       Map<String, Resource> planResources,
-      Map<String, Resource> reservedResources);
+      Map<String, Resource> reservedResources) {
+    for (String l: planResources.keySet()) {
+      boolean nlGreater = Resources.greaterThan(scheduler.getResourceCalculator(),
+          clusterResources.get(l), reservedResources.get(l), planResources.get(l));
+      if (!nlGreater)
+        return false;
+    }
+    return true;
+  }
 
   /**
    * Get a list of reservation queues for this planQueue
@@ -473,7 +476,7 @@ return numRes;
   /**
    * Get plan resources for this planQueue
    */
-  protected abstract Map<String, RMNodeLabel> getPlanResources(
+  protected abstract Map<String, Resource> getPlanResources(
       Plan plan, Queue queue, List<RMNodeLabel> rmNodeLabelList);
 
   /**
