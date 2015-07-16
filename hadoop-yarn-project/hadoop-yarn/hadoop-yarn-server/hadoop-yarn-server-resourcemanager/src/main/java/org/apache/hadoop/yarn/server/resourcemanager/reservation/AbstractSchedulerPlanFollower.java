@@ -22,7 +22,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
@@ -92,32 +91,40 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     // expect : Map<String, Resource> clusterResourceMap = scheduler.getClusterResource();
     
     // construct cluster resources by node label
-    //Resource clusterResources = scheduler.getClusterResource();
+    // Resource clusterResources = scheduler.getClusterResource();
+    // rmNodeLabelList,rmNodeLabelResources -- cluster-level information, NOT queue-level
     List<RMNodeLabel> rmNodeLabelList = scheduler.getRMContext()
         .getNodeLabelManager().pullRMNodeLabelsInfo();
-    Map<String, Resource> nlClusterResources = new HashMap<String, Resource>();
+    Map<String, Resource> rmNodeLabelResources = new HashMap<String, Resource>();
     Map<String, Resource> reservedResources = new HashMap<String, Resource>();
     for (RMNodeLabel rmnl: rmNodeLabelList) {
-      nlClusterResources.put(rmnl.getLabelName(), rmnl.getResource());
+      rmNodeLabelResources.put(rmnl.getLabelName(), rmnl.getResource());
       reservedResources.put(rmnl.getLabelName(), Resource.newInstance(0,0));
     }
-    // get the amount of resources used by the current plan
-    
-    Map<String, Resource> planResources = getPlanResources(plan, planQueue, rmNodeLabelList);
+    // now get the amount of resources used by the current plan queue
+    // qNodeLabelMap,qNodeLabelResources -- queue-level information
+    Map<String, RMNodeLabel> qNodeLabelMap = getPlanResources(plan, planQueue, rmNodeLabelList);
+    Map<String, Resource> qNodeLabelResources = new HashMap<String, Resource>();
+    // construct a slightly different materialized view : labelString -> Resource
+    for (Map.Entry<String, RMNodeLabel> e : qNodeLabelMap.entrySet()) {
+      qNodeLabelResources.put(e.getKey(), e.getValue().getResource());
+    }
 
-    Set<ReservationAllocation> currentReservations =
-        plan.getReservationsAtTime(now);
-    
-    // TODO(atumanov): ReservationAllocations returned in a map
-    // expect: Map<String, Set<ReservationAllocation>> curResMap
-    // for now : construct this map after the call
-    Map<String, Set<ReservationAllocation>> curResMap = new HashMap<String, Set<ReservationAllocation>>();
-    curResMap.put(CommonNodeLabelsManager.NO_LABEL, currentReservations);
+    // currentReservations is a collection of label-aware reservations active now.
+    // Each such reservation allocation contains skyline accounting per label.
+    Set<ReservationAllocation> currentReservations = plan.getReservationsAtTime(now);
     Set<String> curReservationNames = new HashSet<String>();
+    Set<String> curReservationLabels = new HashSet<String>();
     //Resource reservedResources = Resource.newInstance(0, 0);
     // curReservationNames is populated with names of current reservations as a side-effect 
     int numRes = getReservedResources(now, currentReservations,
         curReservationNames, reservedResources);
+    // post-condition: curReservationNames and reservedResources are set
+    if (currentReservations != null) {
+      for (ReservationAllocation r : currentReservations) {
+        curReservationLabels.addAll(r.getNodeLabels());
+      }
+    }
 
     // create the default reservation queue if it doesn't exist
     String defReservationId = getReservationIdFromQueueName(planQueueName) +
@@ -131,12 +138,11 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     // if the resources dedicated to this plan shrunk, invoke replanner
     // TODO: arePlanResourcesLessThanReservations --> change to do this per partition
     // clusterResources and planResources must both be per partition
-    if (arePlanResourcesLessThanReservations(nlClusterResources, planResources,
+    if (arePlanResourcesLessThanReservations(rmNodeLabelResources, qNodeLabelResources,
         reservedResources)) {
       try {
         plan.getReplanner().plan(plan, null);
-        // TODO(atumanov) : duplicate the code querying the plan data structs, 
-        // reconstruct curReservationNames
+        // TODO : reconstruct curReservationNames after replanning 
       } catch (PlanningException e) {
         LOG.warn("Exception while trying to replan: {}", planQueueName, e);
       }
@@ -162,27 +168,42 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     cleanupExpiredQueues(planQueueName, plan.getMoveOnExpiry(), expired,
         defReservationQueue);
 
-    // extract all the unique labels from currentReservations
-    // external for loop over those labels
-    // per each label do:
-    //     get all reservations using this label
-    //     sort them by delta
-    //     for each queue in sorted queue list:
-    //         setEntitlement(q)
+    // Algorithm:
+    // for each unique label from currentReservations
+    //   create a set of reservation allocations for this label
+    //   sort this set
+    //   for each reservation allocation in the sorted set
+    //     calculate targetCapacity
+    //     setEntitlement(l, targetCapacity)
+    //   end for
+    //   set default queue entitlement
+    // end for
     
     // Add new reservations and update existing ones
-    float totalAssignedCapacity = 0f;
-    if (currentReservations != null) {
+    Map<String, Float> totalAssignedCapacity = new HashMap<String, Float>();
+    for (String l : curReservationLabels) {
+      totalAssignedCapacity.put(l, 0f);
       // first release all excess capacity in default queue
       try {
-    	QueueCapacities newcap = new QueueCapacities(false);
-    	newcap.setCapacity(0f);
-    	newcap.setMaximumCapacity(1.0f);
-        setQueueEntitlement(planQueueName, defReservationQueue, newcap);
+    	QueueCapacities defQCapByNodeLabel = new QueueCapacities(false);
+    	defQCapByNodeLabel.setCapacity(l, 0f);
+    	defQCapByNodeLabel.setMaximumCapacity(l, 1.0f);
+    	  // Assumption: capByNodeLabel --> treated downstream as a per-label capacity
+        setQueueEntitlement(planQueueName, defReservationQueue, defQCapByNodeLabel);
       } catch (YarnException e) {
         LOG.warn(
             "Exception while trying to release default queue capacity for plan: {}",
             planQueueName, e);
+      }
+      // construct a set of ReservationAllocations just for the current label
+      Set<ReservationAllocation> currentNLReservations = new HashSet<ReservationAllocation>();
+      for (ReservationAllocation res: currentReservations) {
+        // downcast the reservation to access per label child reservations
+        MultiNodeLabelReservationAllocation nlres = (MultiNodeLabelReservationAllocation)res;
+        ReservationAllocation curNLRes = nlres.getPerLabelAllocations().get(l);
+        if (curNLRes != null) {
+          currentNLReservations.add(curNLRes);
+        }
       }
       // sort allocations from the one giving up the most resources, to the
       // one asking for the most
@@ -190,30 +211,34 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
       // capacity bound
       List<ReservationAllocation> sortedAllocations =
           sortByDelta(
-              new ArrayList<ReservationAllocation>(currentReservations), now,
+              new ArrayList<ReservationAllocation>(currentNLReservations), now,
               plan);
+
+      // for each per label child reservation, determine capacity, set entitlement
       for (ReservationAllocation res : sortedAllocations) {
         String currResId = res.getReservationId().toString();
         if (curReservationNames.contains(currResId)) {
-          // TODO: why is this check needed? curReservationNames is derived from currentReservations
           // NOTE: queue should only be added once. Capacity assignment -- per label
-          // possibility: curReservationNames.remove(currResId); 
           addReservationQueue(planQueueName, planQueue, currResId);
+          // remove this reservation from the list of reservations to process
+          // Note: this mutates curReservationNames, causing it to drift out of sync with currentReservations
+          curReservationNames.remove(currResId);
         }
-        Resource capToAssign = res.getResourcesAtTime(now); // query MultiNLReservationAllocation.getResourcesAtTime(now, l);
+        Resource capToAssign = res.getResourcesAtTime(now, l);
+        
         float targetCapacity = 0f;
         // if the curLabel slice of planResources is positive, calculate targetCap and setEntitlement
-        if (planResources.getMemory() > 0
-            && planResources.getVirtualCores() > 0) {
+        if (qNodeLabelResources.get(l).getMemory() > 0
+            && qNodeLabelResources.get(l).getVirtualCores() > 0) {
           targetCapacity =
-              calculateReservationToPlanRatio(clusterResources,
-                  planResources,
+              calculateReservationToPlanRatio(rmNodeLabelResources.get(l),
+                  qNodeLabelResources.get(l),
                   capToAssign);
         }
         if (LOG.isDebugEnabled()) {
           LOG.debug(
-              "Assigning capacity of {} to queue {} with target capacity {}",
-              capToAssign, currResId, targetCapacity);
+              "Assigning capacity of {} to queue {}, label {} with target capacity {}",
+              capToAssign, currResId, l, targetCapacity);
         }
         // set maxCapacity to 100% unless the job requires gang, in which
         // case we stick to capacity (as running early/before is likely a
@@ -222,39 +247,42 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
         if (res.containsGangs()) {
           maxCapacity = targetCapacity;
         }
+        // set entitlement on this reservation queue
         try {
-          QueueCapacities newcap = new QueueCapacities(false);
-          newcap.setCapacity(targetCapacity);
-          newcap.setMaximumCapacity(maxCapacity);
-          setQueueEntitlement(planQueueName, currResId, newcap);
+          QueueCapacities resQCapByNodeLabel = new QueueCapacities(false);
+          resQCapByNodeLabel.setCapacity(l, targetCapacity);
+          resQCapByNodeLabel.setMaximumCapacity(l, maxCapacity);
+          setQueueEntitlement(planQueueName, currResId, resQCapByNodeLabel);
         } catch (YarnException e) {
           LOG.warn("Exception while trying to size reservation for plan: {}",
               currResId, planQueueName, e);
         }
-        totalAssignedCapacity += targetCapacity;
-      }
-    }
+        // increment totalAssignedCapacity for this label by the targetCapacity assigned to this res
+        if (!totalAssignedCapacity.containsKey(l)) {
+          totalAssignedCapacity.put(l, 0f);
+        }
+        totalAssignedCapacity.put(l, totalAssignedCapacity.get(l).floatValue() + targetCapacity);
+      } // end for each reservation
     // compute the default queue capacity
-    // TODO: this should also be per label, both totalAssignedCapacity and defQCap
-    float defQCap = 1.0f - totalAssignedCapacity;
+    float defQCap = 1.0f - totalAssignedCapacity.get(l);
     if (LOG.isDebugEnabled()) {
       LOG.debug("PlanFollowerEditPolicyTask: total Plan Capacity: {} "
-          + "currReservation: {} default-queue capacity: {}", planResources,
+          + "currReservation: {} default-queue capacity: {}", qNodeLabelResources.get(l),
           numRes, defQCap);
     }
-    
+    // now set the default queue capacity for curLabel
     try {
       // set the default queue to absorb all remaining unallocated capacity
-      QueueCapacities newcap = new QueueCapacities(false);
-      newcap.setCapacity(defQCap);
-      newcap.setMaximumCapacity(1.0f);
-      // TODO : replace newcap with label-vectorized defQCap 
-      setQueueEntitlement(planQueueName, defReservationQueue, newcap);
+      QueueCapacities defQCapByNodeLabel = new QueueCapacities(false);
+      defQCapByNodeLabel.setCapacity(l, defQCap);
+      defQCapByNodeLabel.setMaximumCapacity(l, 1.0f);
+      setQueueEntitlement(planQueueName, defReservationQueue, defQCapByNodeLabel);
     } catch (YarnException e) {
       LOG.warn(
           "Exception while trying to reclaim default queue capacity for plan: {}",
           planQueueName, e);
     }
+  } // end for each label
     // garbage collect finished reservations from plan
     try {
       plan.archiveCompletedReservations(now);
@@ -295,6 +323,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
       boolean shouldMove, Set<String> toRemove, String defReservationQueue) {
     for (String expiredReservationId : toRemove) {
       try {
+        // TODO: labelify -- reduce entitlement to 0 for all labels of this queue
         // reduce entitlement to 0
         String expiredReservation = getReservationQueueName(planQueueName,
             expiredReservationId);
@@ -358,9 +387,17 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     int numRes = 0;
     if (currentReservations != null) {
       numRes = currentReservations.size();
+      // for each res, for each label, aggregate Resource usage per label
+      // NOTE: this works for reservations with different label sets
       for (ReservationAllocation reservation : currentReservations) {
         curReservationNames.add(reservation.getReservationId().toString());
-        Resources.addTo(reservedResources, reservation.getResourcesAtTime(now));
+        for (String nl : reservation.getNodeLabels()) {
+          if (!reservedResources.containsKey(nl)) {
+            // if this label is not yet tracked by our map, add it
+            reservedResources.put(nl, Resource.newInstance(0, 0));
+          }
+          Resources.addTo(reservedResources.get(nl), reservation.getResourcesAtTime(now, nl));
+        }
       }
     }
     return numRes;
@@ -436,8 +473,8 @@ return numRes;
   /**
    * Get plan resources for this planQueue
    */
-  protected abstract Map<String, Resource> getPlanResources(
-      Plan plan, Queue queue, Map<String, Resource> clusterResources);
+  protected abstract Map<String, RMNodeLabel> getPlanResources(
+      Plan plan, Queue queue, List<RMNodeLabel> rmNodeLabelList);
 
   /**
    * Get reservation queue resources if it exists otherwise return null

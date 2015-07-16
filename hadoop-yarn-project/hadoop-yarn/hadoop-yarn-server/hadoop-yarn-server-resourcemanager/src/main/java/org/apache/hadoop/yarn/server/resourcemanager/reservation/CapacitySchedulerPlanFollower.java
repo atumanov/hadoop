@@ -93,12 +93,14 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
         clusterResources, reservationResources, planResources);
   }
 
+  @Override
   protected boolean arePlanResourcesLessThanReservations(
       Map<String,Resource> clusterResources, 
       Map<String,Resource> planResources,
       Map<String,Resource> reservedResources) {
     
     for (String l: planResources.keySet()) {
+      // TODO: handle null Resources (no downstream checks for that)
       boolean nlGreater = Resources.greaterThan(cs.getResourceCalculator(),
           clusterResources.get(l), reservedResources.get(l), planResources.get(l));
       if (!nlGreater)
@@ -109,16 +111,14 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
 //    return Resources.greaterThan(cs.getResourceCalculator(),
 //        clusterResources, reservedResources, planResources);
   }
-  
-  @Override
-  protected boolean arePlanResourcesLessThanReservations(
-      Resource clusterResources, Resource planResources,
-      Resource reservedResources) {
-    // TODO: invoke by label
-    
-    return Resources.greaterThan(cs.getResourceCalculator(),
-        clusterResources, reservedResources, planResources);
-  }
+//  
+//  @Override
+//  protected boolean arePlanResourcesLessThanReservations(
+//      Resource clusterResources, Resource planResources,
+//      Resource reservedResources) {
+//    return Resources.greaterThan(cs.getResourceCalculator(),
+//        clusterResources, reservedResources, planResources);
+//  }
 
   @Override
   protected List<? extends Queue> getChildReservationQueues(Queue queue) {
@@ -174,38 +174,40 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
    * @param plan - Reservation plan
    * @param queue - Reservation queue
    * @param nlclusterResources
-   * @return Map<String, Resources> -- a set of resources consumed by the plan
+   * @return Map<String, Resources> -- a set of resources consumed by the plan queue
    * per label
    * side-effect : also propagates absolute queue capacity to the plan
    */
   @Override
-  protected Map<String, Resource> getPlanResources(
+  protected Map<String, RMNodeLabel> getPlanResources(
       Plan plan, Queue queue, List<RMNodeLabel> rmNodeLabelList) {
-    // return val
-    Map<String, Resource> planResources = new HashMap<String, Resource>();
+
     PlanQueue planQueue = (PlanQueue)queue;
-    QueueCapacities qcap = planQueue.getQueueCapacities();
-    Set<String> qcaplabels = qcap.getExistingNodeLabels();
-    // make a single pass through list -- create an aux lookup table
+    QueueCapacities planqcap = planQueue.getQueueCapacities();
+    Set<String> planqcaplabels = planqcap.getExistingNodeLabels();
+    // create a lookup table mapping label strings to label objects for convenience.
     Map<String, RMNodeLabel> rmNodeLabelMap = new HashMap<String, RMNodeLabel>();
+    Map<String, RMNodeLabel> planqNodeLabelMap = new HashMap<String, RMNodeLabel>();
     for (RMNodeLabel rmnl: rmNodeLabelList) {
       rmNodeLabelMap.put(rmnl.getLabelName(), rmnl);
     }
-    // XXX: continue here after visit to Carlo's cube
-    
+
     // get absolute queue capacity vector
     // float planAbsCap = planQueue.getAbsoluteCapacity();
-    for (String l : qcaplabels) { // for each plan queue label
+    // Iterate over all plan queue labels. For each label, calculate resource.
+    // Assumption: planqcaplabels are unique
+    for (String l : planqcaplabels) { // for each plan queue label
       // look up its absolute capacity in the queue
-      float abscap = qcap.getAbsoluteCapacity(l);
+      float abscap = planqcap.getAbsoluteCapacity(l);
+      RMNodeLabel rmnl = rmNodeLabelMap.get(l).getCopy(); // take a clone of the RM node label
       // TODO: handle absence of queue label in cluster labels...
-      Resource labelRes = Resources.multiply(nlclusterResources.get(l), abscap);
-      planResources.put(l, labelRes);
+      Resource labelRes = Resources.multiply(rmnl.getResource(), abscap);
+      rmnl.setResource(labelRes); // is this necessary?
+      planqNodeLabelMap.put(l, rmnl);
     }
-    //Resource planResources = Resources.multiply(clusterResources, planAbsCap);
     // TODO: move total capacity setting out?
-    plan.setTotalCapacity(planResources); // Map<String, RMNodeLabel>
-    return planResources;
+    plan.setTotalCapacity(planqNodeLabelMap); // Map<String, RMNodeLabel>
+    return planqNodeLabelMap;
   }
 
   @Override
