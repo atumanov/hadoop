@@ -18,21 +18,16 @@
  
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common;
 
-public class QueueEntitlement {
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
 
-  private float capacity;
-  private float maxCapacity;
+public class QueueEntitlement extends QueueCapacities {
 
-  public QueueEntitlement()
-  {
-	  //empty ctor
-  }
-  
   public QueueEntitlement(float capacity, float maxCapacity){
-    this.setCapacity(capacity);
-    this.maxCapacity = maxCapacity;
+    super(false);
+    super.setCapacity(capacity);
+    super.setMaximumCapacity(maxCapacity);
    }
-
+/*
   public float getMaxCapacity() {
     return maxCapacity;
   }
@@ -48,4 +43,5 @@ public class QueueEntitlement {
   public void setCapacity(float capacity) {
     this.capacity = capacity;
   }
+  */
 }
