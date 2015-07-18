@@ -191,8 +191,15 @@ public class CapacitySchedulerPlanFollower extends AbstractSchedulerPlanFollower
     for (String l : planqcaplabels) { // for each plan queue label
       // look up its absolute capacity in the queue
       float abscap = planqcap.getAbsoluteCapacity(l);
-      RMNodeLabel rmnl = rmNodeLabelMap.get(l).getCopy(); // take a clone of the RM node label
-      // TODO: handle absence of queue label in cluster labels...
+
+      RMNodeLabel rmnl = rmNodeLabelMap.get(l);
+      if (rmnl == null) {
+        // This should not happen
+        LOG.error("[getPlanResources] Missing plan queue label " + l + " in the set of cluster labels " + planqcaplabels.toString());
+        System.out.println("[getPlanResources] Missing plan queue label " + l + " in the set of cluster labels " + planqcaplabels.toString());
+        continue;
+      }
+      rmnl = rmnl.getCopy();
       Resource labelRes = Resources.multiply(rmnl.getResource(), abscap);
       rmnl.setResource(labelRes); // is this necessary?
       planqNodeLabelMap.put(l, rmnl);

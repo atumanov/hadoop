@@ -20,11 +20,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -33,7 +37,11 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
@@ -55,6 +63,8 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class TestCapacitySchedulerPlanFollower extends TestSchedulerPlanFollowerBase {
 
@@ -66,6 +76,36 @@ public class TestCapacitySchedulerPlanFollower extends TestSchedulerPlanFollower
   @Rule
   public TestName name = new TestName();
 
+  private RMNodeLabelsManager setUpRMNodeLabelsManager() {
+    RMNodeLabelsManager nlm = mock(RMNodeLabelsManager.class);
+    when(
+        nlm.getQueueResource(any(String.class), any(Set.class),
+            any(Resource.class))).thenAnswer(new Answer<Resource>() {
+      @Override
+      public Resource answer(InvocationOnMock invocation) throws Throwable {
+        Object[] args = invocation.getArguments();
+        return (Resource) args[2];
+      }
+    });
+
+    when(nlm.getResourceByLabel(any(String.class), any(Resource.class)))
+        .thenAnswer(new Answer<Resource>() {
+          @Override
+          public Resource answer(InvocationOnMock invocation) throws Throwable {
+            Object[] args = invocation.getArguments();
+            return (Resource) args[1];
+          }
+        });
+
+    List<RMNodeLabel> lst = new ArrayList<RMNodeLabel>();
+    RMNodeLabel nl = new RMNodeLabel(RMNodeLabelsManager.NO_LABEL);
+    nl.setResource(Resource.newInstance(125 * GB, 125));
+    lst.add(nl);
+    when(nlm.pullRMNodeLabelsInfo()).thenReturn(lst);
+
+    return nlm;
+  }
+
   @Before
   public void setUp() throws Exception {
     CapacityScheduler spyCs = new CapacityScheduler();
@@ -73,6 +113,8 @@ public class TestCapacitySchedulerPlanFollower extends TestSchedulerPlanFollower
     scheduler = cs;
 
     rmContext = TestUtils.getMockRMContext();
+    RMNodeLabelsManager nlm = setUpRMNodeLabelsManager();
+    rmContext.setNodeLabelManager(nlm);
     spyRMContext = spy(rmContext);
 
     ConcurrentMap<ApplicationId, RMApp> spyApps =
@@ -83,10 +125,12 @@ public class TestCapacitySchedulerPlanFollower extends TestSchedulerPlanFollower
     Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId) Matchers.any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
     when(spyRMContext.getScheduler()).thenReturn(scheduler);
+    when(spyRMContext.getNodeLabelManager()).thenReturn(nlm);
 
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
     ReservationSystemTestUtil.setupQueueConfiguration(csConf);
+    csConf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
 
     cs.setConf(csConf);
 
@@ -95,8 +139,8 @@ public class TestCapacitySchedulerPlanFollower extends TestSchedulerPlanFollower
     when(csContext.getConf()).thenReturn(csConf);
     when(csContext.getMinimumResourceCapability()).thenReturn(minAlloc);
     when(csContext.getMaximumResourceCapability()).thenReturn(maxAlloc);
-    when(csContext.getClusterResource()).thenReturn(
-        Resources.createResource(100 * 16 * GB, 100 * 32));
+//    when(csContext.getClusterResource()).thenReturn(
+//        Resources.createResource(100 * 16 * GB, 100 * 32));
     when(scheduler.getClusterResource()).thenReturn(
         Resources.createResource(125 * GB, 125));
     when(csContext.getResourceCalculator()).thenReturn(
