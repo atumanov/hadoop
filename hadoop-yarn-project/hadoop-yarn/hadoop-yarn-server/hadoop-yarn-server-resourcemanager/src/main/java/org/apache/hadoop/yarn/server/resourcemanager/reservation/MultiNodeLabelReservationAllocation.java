@@ -58,6 +58,7 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
     }
   }
 
+  @Override
   public Map<String, ReservationAllocation> getPerLabelAllocations() {
     return perLabelAllocations;
   }
@@ -102,6 +103,20 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
       sb.append(e.getKey() + " = " + e.getValue());
     }
     return sb.toString();
+  }
+  
+  @Override
+  public long getStartTime() {
+    // note: this has been initialized to the earliest start time of all the per
+    // node-label ReservationAllocation
+    return startTime;
+  }
+
+  @Override
+  public long getEndTime() {
+    // note: this has been initialized to the latest end time of all the per
+    // node-label ReservationAllocation
+    return endTime;
   }
   
   @Override
