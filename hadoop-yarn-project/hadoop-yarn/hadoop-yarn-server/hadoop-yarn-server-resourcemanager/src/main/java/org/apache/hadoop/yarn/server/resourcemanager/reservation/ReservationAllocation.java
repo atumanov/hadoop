@@ -187,6 +187,14 @@ public interface ReservationAllocation extends
    * @return the resources reserved at the specified time/label
    */  
   public Resource getResourcesAtTime(long t, String label);
+
+  /**
+   * This method return a map between node-labels and ReservationAllocation 
+   * (capturing the resources allocated for each of the node-label)
+   * 
+   * @return a map of node-labels to reservation allocations 
+   */
+  Map<String, ReservationAllocation> getPerLabelAllocations();
   
 
   

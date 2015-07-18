@@ -47,6 +47,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * This class tests the multi-NodeLabel functionalities of the reservation plan.
+ * 
+ */
 public class TestInMemoryPlanNodeLabel {
 
   private String user = "yarn";

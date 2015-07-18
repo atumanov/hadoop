@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -236,6 +237,14 @@ class InMemoryReservationAllocation implements ReservationAllocation {
   @Override
   public List<String> getNodeLabels() {
     return Collections.singletonList(nodeLabel);
+  }
+
+  @Override
+  public Map<String, ReservationAllocation> getPerLabelAllocations() {
+    Map<String, ReservationAllocation> map =
+        new HashMap<String, ReservationAllocation>();
+    map.put(nodeLabel, this);
+    return map;
   }
 
 }

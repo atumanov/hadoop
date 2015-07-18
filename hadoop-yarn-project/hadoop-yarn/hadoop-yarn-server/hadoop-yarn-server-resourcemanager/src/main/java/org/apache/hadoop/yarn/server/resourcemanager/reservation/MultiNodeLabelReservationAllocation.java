@@ -58,6 +58,7 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
     }
   }
 
+  @Override
   public Map<String, ReservationAllocation> getPerLabelAllocations() {
     return perLabelAllocations;
   }
