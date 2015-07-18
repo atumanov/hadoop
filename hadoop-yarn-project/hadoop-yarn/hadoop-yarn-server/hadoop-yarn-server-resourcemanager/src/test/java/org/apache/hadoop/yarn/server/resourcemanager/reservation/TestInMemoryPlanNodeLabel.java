@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -179,7 +180,11 @@ public class TestInMemoryPlanNodeLabel {
             plan.getConsumptionForUser(user, i));
       }
       
+      Set<ReservationAllocation> allocs = plan.getReservationsAtTime(start + 1);
       
+      for(ReservationAllocation ra : allocs){
+        Assert.assertTrue(ra instanceof MultiNodeLabelReservationAllocation);
+      }
 
     }
     
