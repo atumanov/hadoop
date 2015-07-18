@@ -105,6 +105,20 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
   }
   
   @Override
+  public long getStartTime() {
+    // note: this has been initialized to the earliest start time of all the per
+    // node-label ReservationAllocation
+    return startTime;
+  }
+
+  @Override
+  public long getEndTime() {
+    // note: this has been initialized to the latest end time of all the per
+    // node-label ReservationAllocation
+    return endTime;
+  }
+  
+  @Override
   public long getStartTime(String label) {
     if(perLabelAllocations.containsKey(label)){
       return perLabelAllocations.get(label).getStartTime(label);
