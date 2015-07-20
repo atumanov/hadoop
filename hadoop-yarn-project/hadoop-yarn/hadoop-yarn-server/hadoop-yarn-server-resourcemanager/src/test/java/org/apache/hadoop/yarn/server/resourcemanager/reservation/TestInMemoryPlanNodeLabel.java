@@ -130,7 +130,7 @@ public class TestInMemoryPlanNodeLabel {
         + alloc.length, alloc.length, allocations.values());
     ReservationAllocation rAllocation = new InMemoryReservationAllocation(
         reservationID, rDef, user, planName, start, start + alloc.length,
-        allocations, resCalc, minAlloc, label1);
+        allocations, resCalc, minAlloc, label1, false);
 
     int[] alloc2 = { 20, 20, 20 };
     Map<ReservationInterval, Resource> allocations2 = generateAllocation(
@@ -139,7 +139,7 @@ public class TestInMemoryPlanNodeLabel {
         start + alloc.length, alloc.length, allocations.values());
     ReservationAllocation rAllocation2 = new InMemoryReservationAllocation(
         reservationID, rDef2, user, planName, start2, start2 + alloc2.length,
-        allocations2, resCalc, minAlloc, label2);
+        allocations2, resCalc, minAlloc, label2, true);
 
     Map<String, ReservationAllocation> resAllocations = new HashMap<>();
     resAllocations.put(rAllocation.getNodeLabels().get(0), rAllocation);
