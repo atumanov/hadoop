@@ -134,6 +134,26 @@ public class ReservationRequestPBImpl extends ReservationRequest {
     maybeInitBuilder();
     builder.setDuration(duration);
   }
+  
+  @Override
+  public String getNodeLabelExpression() {
+	  ReservationRequestProtoOrBuilder p = viaProto ? proto : builder;
+	  if (!p.hasNodeLabelExpression()) {
+		  return null;
+	  }
+	  return p.getNodeLabelExpression().trim();
+  }
+  
+  @Override
+  public void setNodeLabelExpression(String nodeLabelExpression) {
+	  maybeInitBuilder();
+	  //sanity check on input
+	  if (null == nodeLabelExpression) {
+		  builder.clearNodeLabelExpression();
+		  return;
+	  }
+	  builder.setNodeLabelExpression(nodeLabelExpression);
+  }
 
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {
     return new ResourcePBImpl(p);
@@ -147,6 +167,7 @@ public class ReservationRequestPBImpl extends ReservationRequest {
   public String toString() {
     return "{Capability: " + getCapability() + ", # Containers: "
         + getNumContainers() + ", Concurrency: " + getConcurrency()
-        + ", Lease Duration: " + getDuration() + "}";
+        + ", Lease Duration: " + getDuration()
+        + ", Node Label Expression: " + getNodeLabelExpression() + "}";
   }
 }

@@ -171,6 +171,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionResourceRequestPBImp
 import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueUserACLInfoPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ReservationRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceOptionPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
@@ -205,6 +206,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PreemptionResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueUserACLInfoProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ReservationRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceBlacklistRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceOptionProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
@@ -1060,6 +1062,11 @@ public class TestPBImplRecords {
   @Test
   public void testResourceRequestPBImpl() throws Exception {
     validatePBImplRecord(ResourceRequestPBImpl.class, ResourceRequestProto.class);
+  }
+  
+  @Test
+  public void testReservationRequestPBImpl() throws Exception {
+	  validatePBImplRecord(ReservationRequestPBImpl.class, ReservationRequestProto.class);
   }
 
   @Test

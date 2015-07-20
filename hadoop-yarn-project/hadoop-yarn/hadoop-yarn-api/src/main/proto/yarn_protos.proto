@@ -417,6 +417,7 @@ message ReservationRequestProto {
   optional int32 num_containers = 2 [default = 1];
   optional int32 concurrency = 3 [default = 1];
   optional int64 duration = 4 [default = -1];
+  optional string node_label_expression = 5;
 }
 
 message ReservationRequestsProto {
