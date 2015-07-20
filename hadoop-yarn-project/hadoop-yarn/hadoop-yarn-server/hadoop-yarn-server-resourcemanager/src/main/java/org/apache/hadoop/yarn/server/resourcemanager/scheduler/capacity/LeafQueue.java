@@ -676,7 +676,8 @@ public class LeafQueue extends AbstractCSQueue {
     
     LOG.info("Application added -" +
         " appId: " + application.getApplicationId() +
-        " user: " + user + "," + " leaf-queue: " + getQueueName() +
+        " user: " + application.getUser() + "," +
+        " leaf-queue: " + getQueueName() +
         " #user-pending-applications: " + user.getPendingApplications() +
         " #user-active-applications: " + user.getActiveApplications() +
         " #queue-pending-applications: " + getNumPendingApplications() +
@@ -828,7 +829,8 @@ public class LeafQueue extends AbstractCSQueue {
             RMAppAttempt rmAppAttempt =
                 csContext.getRMContext().getRMApps()
                     .get(application.getApplicationId()).getCurrentAppAttempt();
-            if (null == rmAppAttempt.getMasterContainer()) {
+            if (rmAppAttempt.getSubmissionContext().getUnmanagedAM() == false
+                && null == rmAppAttempt.getMasterContainer()) {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Skip allocating AM container to app_attempt="
                     + application.getApplicationAttemptId()

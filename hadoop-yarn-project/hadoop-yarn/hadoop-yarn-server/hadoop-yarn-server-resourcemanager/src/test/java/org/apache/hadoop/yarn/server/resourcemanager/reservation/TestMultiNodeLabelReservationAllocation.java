@@ -72,7 +72,7 @@ public class TestMultiNodeLabelReservationAllocation {
     int start = 100;
     ReservationDefinition rDef = createSimpleReservationDefinition(start, start
         + alloc.length + 1, alloc.length);
-    Map<ReservationInterval, ReservationRequest> allocations = generateAllocation(
+    Map<ReservationInterval, Resource> allocations = generateAllocation(
         start, alloc, false, false);
     ReservationAllocation rAllocation = new InMemoryReservationAllocation(
         reservationID, rDef, user, planName, start, start + alloc.length + 1,
@@ -81,7 +81,7 @@ public class TestMultiNodeLabelReservationAllocation {
     // generate different allocation for label2
     int[] alloc2 = { 20, 20, 20 };
     int start2 = 200;
-    Map<ReservationInterval, ReservationRequest> allocations2 = generateAllocation(
+    Map<ReservationInterval, Resource> allocations2 = generateAllocation(
         start2, alloc2, false, false);
     ReservationAllocation rAllocation2 = new InMemoryReservationAllocation(
         reservationID, rDef, user, planName, start2,
@@ -107,8 +107,8 @@ public class TestMultiNodeLabelReservationAllocation {
 
   private void doAssertions(ReservationAllocation rAllocation,
       ReservationId reservationID, ReservationDefinition rDef,
-      Map<ReservationInterval, ReservationRequest> allocations, int start,
-      int[] alloc, Map<ReservationInterval, ReservationRequest> allocations2,
+      Map<ReservationInterval, Resource> allocations, int start,
+      int[] alloc, Map<ReservationInterval, Resource> allocations2,
       int start2, int[] alloc2) {
     Assert.assertEquals(reservationID, rAllocation.getReservationId());
     Assert.assertEquals(rDef, rAllocation.getReservationDefinition());
@@ -136,9 +136,9 @@ public class TestMultiNodeLabelReservationAllocation {
     return rDef;
   }
 
-  private Map<ReservationInterval, ReservationRequest> generateAllocation(
+  private Map<ReservationInterval, Resource> generateAllocation(
       int startTime, int[] alloc, boolean isStep, boolean isGang) {
-    Map<ReservationInterval, ReservationRequest> req = new HashMap<ReservationInterval, ReservationRequest>();
+    Map<ReservationInterval, Resource> req = new HashMap<ReservationInterval, Resource>();
     int numContainers = 0;
     for (int i = 0; i < alloc.length; i++) {
       if (isStep) {
@@ -146,11 +146,7 @@ public class TestMultiNodeLabelReservationAllocation {
       } else {
         numContainers = alloc[i];
       }
-      ReservationRequest rr = ReservationRequest.newInstance(
-          Resource.newInstance(1024, 1), (numContainers));
-      if (isGang) {
-        rr.setConcurrency(numContainers);
-      }
+      Resource rr = Resource.newInstance(1024 * numContainers, numContainers);
       req.put(new ReservationInterval(startTime + i, startTime + i + 1), rr);
     }
     return req;

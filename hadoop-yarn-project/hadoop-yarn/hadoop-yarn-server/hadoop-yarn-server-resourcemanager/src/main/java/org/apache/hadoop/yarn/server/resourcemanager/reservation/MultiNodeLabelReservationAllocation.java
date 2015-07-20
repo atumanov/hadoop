@@ -51,7 +51,7 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
       if (r.containsGangs()) {
         this.setHasGang(true);
       }
-      for (Map.Entry<ReservationInterval, ReservationRequest> e : r
+      for (Map.Entry<ReservationInterval, Resource> e : r
           .getAllocationRequests().entrySet()) {
         super.resourcesOverTime.addInterval(e.getKey(), e.getValue());
       }
@@ -69,7 +69,7 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
   }
 
   @Override
-  public Map<ReservationInterval, ReservationRequest> getAllocationRequests() {
+  public Map<ReservationInterval, Resource> getAllocationRequests() {
     return getAllocationRequests(RMNodeLabelsManager.NO_LABEL);
   }
 
@@ -79,7 +79,7 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
   }
 
   @Override
-  public Map<ReservationInterval, ReservationRequest> getAllocationRequests(
+  public Map<ReservationInterval, Resource> getAllocationRequests(
       String nodeLabel) {
     if (perLabelAllocations.containsKey(nodeLabel)) {
       return perLabelAllocations.get(nodeLabel)

@@ -567,23 +567,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   void closeConnectionToNamenode() {
     RPC.stopProxy(namenode);
   }
-  
-  /** Abort and release resources held.  Ignore all errors. */
-  public void abort() {
-    clientRunning = false;
-    closeAllFilesBeingWritten(true);
-    try {
-      // remove reference to this client and stop the renewer,
-      // if there is no more clients under the renewer.
-      getLeaseRenewer().closeClient(this);
-    } catch (IOException ioe) {
-       LOG.info("Exception occurred while aborting the client " + ioe);
-    }
-    closeConnectionToNamenode();
-  }
 
   /** Close/abort all files being written. */
-  private void closeAllFilesBeingWritten(final boolean abort) {
+  public void closeAllFilesBeingWritten(final boolean abort) {
     for(;;) {
       final long inodeId;
       final DFSOutputStream out;
@@ -1181,7 +1167,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     //    Get block info from namenode
     TraceScope scope = getPathTraceScope("newDFSInputStream", src);
     try {
-      return new DFSInputStream(this, src, verifyChecksum);
+      return new DFSInputStream(this, src, verifyChecksum, null);
     } finally {
       scope.close();
     }
@@ -3127,6 +3113,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       peer = TcpPeerServer.peerFromSocketAndKey(saslClient, sock, this,
           blockToken, datanodeId);
       peer.setReadTimeout(socketTimeout);
+      peer.setWriteTimeout(socketTimeout);
       success = true;
       return peer;
     } finally {
