@@ -115,6 +115,9 @@ Trunk (Unreleased)
     MAPREDUCE-2632. Avoid calling the partitioner when the numReduceTasks is 1.
     (Ravi Teja Ch N V and Sunil G via kasha)
 
+    MAPREDUCE-6407. Migrate MAPREDUCE nativetask build to new CMake framework
+    (Alan Burlison via Colin P. McCabe)
+
   BUG FIXES
 
     MAPREDUCE-6191. Improve clearing stale state of Java serialization
@@ -199,6 +202,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-6396. TestPipeApplication fails by NullPointerException.
     (Brahma Reddy Battula via aajisaka)
+
+    MAPREDUCE-6406. Update FileOutputCommitter.FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT
+    to match mapred-default.xml. (Ray Chiang via devaraj)
 
   BREAKDOWN OF MAPREDUCE-2841 (NATIVE TASK) SUBTASKS
 
@@ -361,7 +367,13 @@ Release 2.8.0 - UNRELEASED
     MAPREDUCE-6408. Queue name and user name should be printed on the job page.
     (Siqi Li via gera)
 
+    MAPREDUCE-6384. Add the last reporting reducer info for too many fetch
+    failure diagnostics (Chang Li via jlowe)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
+    jlowe)
 
   BUG FIXES
 
@@ -502,7 +514,50 @@ Release 2.8.0 - UNRELEASED
     multibyte record delimiters well (Vinayakumar B, Rushabh Shah, and Akira
     AJISAKA via jlowe)
 
-Release 2.7.1 - UNRELEASED
+    MAPREDUCE-6400. Multiple shuffle transfer fails because input is closed
+    too early (Brahma Reddy Battula, Akira AJISAKA, and Gera Shegalov via
+    jlowe)
+
+    MAPREDUCE-6413. TestLocalJobSubmission is failing with unknown host
+    (zhihai xu via jlowe)
+
+    MAPREDUCE-6121. JobResourceUpdater#compareFs() doesn't handle HA namespaces
+    (rchiang via rkanter)
+
+    MAPREDUCE-6420. Interrupted Exception in LocalContainerLauncher should be
+    logged in warn/info level (Chang Li via jlowe)
+
+    MAPREDUCE-6418. MRApp should not shutdown LogManager during shutdown
+    (Chang Li via jlowe)
+
+    MAPREDUCE-6038. A boolean may be set error in the Word Count v2.0 in
+    MapReduce Tutorial. (Tsuyoshi Ozawa via cdouglas)
+
+    MAPREDUCE-6421. Fix findbugs warning in
+    RMContainerAllocator.reduceNodeLabelExpression.
+    (Brahma Reddy Battula via aajisaka)
+
+    MAPREDUCE-6427. Fix typo in JobHistoryEventHandler. (Ray Chiang via cdouglas)
+
+Release 2.7.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-6425. ShuffleHandler passes wrong "base" parameter to getMapOutputInfo
+    if mapId is not in the cache. (zhihai xu via devaraj)
+
+    MAPREDUCE-6426. TestShuffleHandler#testGetMapOutputInfo is failing.
+    (zhihai xu via devaraj)
+
+Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
 
@@ -544,6 +599,9 @@ Release 2.7.1 - UNRELEASED
 
     MAPREDUCE-6387. Serialize the recently added Task#encryptedSpillKey field at 
     the end. (Arun Suresh via kasha)
+
+    MAPREDUCE-6410. Fixed MapReduce JobHistory server to use the right (login)
+    UGI to refresh log and cleaner settings. (Varun Saxena via vinodkv)
 
 Release 2.7.0 - 2015-04-20
 
