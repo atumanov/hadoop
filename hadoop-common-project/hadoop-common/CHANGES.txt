@@ -53,6 +53,9 @@ Trunk (Unreleased)
 
   IMPROVEMENTS
 
+    HADOOP-11203. Allow ditscp to accept bandwitdh in fraction MegaBytes
+    (Raju Bairishetti via amareshwari)
+
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
     not covered (Eric Charles via bobby)
 
@@ -226,6 +229,10 @@ Trunk (Unreleased)
 
     HADOOP-11142. Remove hdfs dfs reference from file system shell
     documentation (Kengo Seki via aw)
+
+    HADOOP-12149. copy all of test-patch BINDIR prior to re-exec (aw)
+
+    HADOOP-10979. Auto-entries in hadoop_usage (aw)
 
   BUG FIXES
 
@@ -485,6 +492,9 @@ Trunk (Unreleased)
     HADOOP-11347. RawLocalFileSystem#mkdir and create should honor umask (Varun
     Saxena via Colin P. McCabe)
 
+    HADOOP-12107. long running apps may have a huge number of StatisticsData
+    instances under FileSystem (Sangjin Lee via Ming Ma)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -515,6 +525,9 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-10971. Add -C flag to make `hadoop fs -ls` print filenames only.
     (Kengo Seki via aajisaka)
+
+    HADOOP-5732. Add SFTP FileSystem. (Ramtin Boustani and Inigo Goiri via
+    cdouglas)
 
   IMPROVEMENTS
 
@@ -654,6 +667,44 @@ Release 2.8.0 - UNRELEASED
     HADOOP-7139. Allow appending to existing SequenceFiles
     (kanaka kumar avvaru via vinayakumarb)
 
+    HADOOP-11958. MetricsSystemImpl fails to show backtrace when an error
+    occurs (Jason Lowe via jeagles)
+
+    HADOOP-12158. Improve error message in
+    TestCryptoStreamsWithOpensslAesCtrCryptoCodec when OpenSSL is not
+    installed. (wang)
+
+    HADOOP-12124. Add HTrace support for FsShell (cmccabe)
+
+    HADOOP-12171. Shorten overly-long htrace span names for server (cmccabe)
+
+    HADOOP-12045. Enable LocalFileSystem#setTimes to change atime.
+    (Kazuho Fujii via cnauroth)
+
+    HADOOP-11974. Fix FIONREAD #include on Solaris (Alan Burlison via Colin P.
+    McCabe)
+
+    HADOOP-12193. Rename Touchz.java to Touch.java. (wang)
+
+    HADOOP-12195. Add annotation to package-info.java file to workaround
+    MCOMPILER-205. (wang)
+
+    HADOOP-12201. Add tracing to FileSystem#createFileSystem and Globber#glob
+    (cmccabe)
+
+    HADOOP-12180. Move ResourceCalculatorPlugin from YARN to Common. 
+    (Chris Douglas via kasha)
+
+    HADOOP-12210. Collect network usage on the node (Robert Grandl via cdouglas)
+
+    HADOOP-12211. Collect disk usage on the node (Robert Grandl via cdouglas)
+
+    HADOOP-12153. ByteBufferReadable doesn't declare @InterfaceAudience and
+    @InterfaceStability. (Brahma Reddy Battula via ozawa)
+
+    HADOOP-11893. Mark org.apache.hadoop.security.token.Token as
+    @InterfaceAudience.Public. (Brahma Reddy Battula via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-11785. Reduce the number of listStatus operation in distcp
@@ -673,6 +724,24 @@ Release 2.8.0 - UNRELEASED
 
     HADOOP-11885. hadoop-dist dist-layout-stitching.sh does not work with dash.
     (wang)
+
+    HADOOP-12104. Migrate Hadoop Pipes native build to new CMake framework
+    (alanburlison via cmccabe)
+
+    HADOOP-12036. Consolidate all of the cmake extensions in one directory
+    (alanburlison via cmccabe)
+
+    HADOOP-12112. Make hadoop-common-project Native code -Wall-clean
+    (alanburlison via cmccabe)
+
+    HADOOP-12172. FsShell mkdir -p makes an unnecessary check for the existence
+    of the parent. (cnauroth)
+
+    HADOOP-12194. Support for incremental generation in the protoc plugin.
+    (wang)
+
+    HADOOP-11878. FileContext#fixRelativePart should check for not null for a
+    more informative exception. (Brahma Reddy Battula via kasha)
 
   BUG FIXES
 
@@ -870,7 +939,75 @@ Release 2.8.0 - UNRELEASED
     HADOOP-12076. Incomplete Cache Mechanism in CredentialProvider API.
     (Larry McCay via cnauroth)
 
-Release 2.7.1 - UNRELEASED
+    HADOOP-12119. hadoop fs -expunge does not work for federated namespace
+    (J.Andreina via vinayakumarb)
+
+    HADOOP-12089. StorageException complaining " no lease ID" when updating
+    FolderLastModifiedTime in WASB. (Duo Xu via cnauroth)
+
+    HADOOP-12154. FileSystem#getUsed() returns the file length only from root '/'
+    (J.Andreina via vinayakumarb)
+
+    HADOOP-10798. globStatus() should always return a sorted list of files
+    (cmccabe)
+
+    HADOOP-12159. Move DistCpUtils#compareFs() to org.apache.hadoop.fs.FileUtil
+    and fix for HA namespaces (rchiang via rkanter)
+
+    HADOOP-12116. Fix unrecommended syntax usages in hadoop/hdfs/yarn script for
+    cygwin in branch-2. (Li Lu via cnauroth)
+
+    HADOOP-12164. Fix TestMove and TestFsShellReturnCode failed to get command
+    name using reflection. (Lei (Eddy) Xu)
+
+    HADOOP-12117. Potential NPE from Configuration#loadProperty with
+    allowNullValueProperties set. (zhihai xu via vinayakumarb)
+
+    HADOOP-12200. TestCryptoStreamsWithOpensslAesCtrCryptoCodec should be
+    skipped in non-native profile. (Masatake Iwasaki via aajisaka)
+
+    HADOOP-10615. FileInputStream in JenkinsHash#main() is never closed.
+    (Chen He via ozawa)
+
+    HADOOP-12240. Fix tests requiring native library to be skipped in non-native
+    profile. (Masatake Iwasaki via ozawa)
+
+    HADOOP-12235 hadoop-openstack junit & mockito dependencies should be
+    "provided". (Ted Yu via stevel)
+
+    HADOOP-12209 Comparable type should be in FileStatus.
+    (Yong Zhang via stevel)
+
+    HADOOP-12088. KMSClientProvider uses equalsIgnoreCase("application/json").
+    (Brahma Reddy Battula via stevel)
+
+    HADOOP-12051. ProtobufRpcEngine.invoke() should use Exception.toString()
+    over getMessage() in logging/span events. (Varun Saxena via stevel)
+
+Release 2.7.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-12232. Upgrade Tomcat dependency to 6.0.44. (cnauroth)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-12186. ActiveStandbyElector shouldn't call monitorLockNodeAsync
+    multiple times (zhihai xu via vinayakumarb)
+
+    HADOOP-12191. Bzip2Factory is not thread safe. (Brahma Reddy Battula
+    via ozawa)
+
+    HDFS-8767. RawLocalFileSystem.listStatus() returns null for UNIX pipefile.
+    (kanaka kumar avvaru via wheat9)
+
+Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
 

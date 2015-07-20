@@ -24,7 +24,6 @@ import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
-import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 /**
@@ -106,7 +105,7 @@ public interface ReservationAllocation extends
    * @return the allocationRequests the map of resources requested against the
    *         time interval for which they were
    */
-  public Map<ReservationInterval, ReservationRequest> getAllocationRequests();
+  public Map<ReservationInterval, Resource> getAllocationRequests();
   
   
   /**
@@ -116,7 +115,7 @@ public interface ReservationAllocation extends
    * @return the allocationRequests the map of resources requested against the
    *         time interval for which they were
    */
-  public Map<ReservationInterval, ReservationRequest> getAllocationRequests(String nodeLabel);
+  public Map<ReservationInterval, Resource> getAllocationRequests(String nodeLabel);
 
   /**
    * Return the list of all node labels this reservation is allocating against

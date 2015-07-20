@@ -124,22 +124,22 @@ public class TestInMemoryPlanNodeLabel {
       int start, int start2, int allocVal, boolean isAdd) {
     int[] alloc = { allocVal, allocVal, allocVal, allocVal, allocVal, allocVal };
 
-    Map<ReservationInterval, ReservationRequest> allocations = generateAllocation(
+    Map<ReservationInterval, Resource> allocations = generateAllocation(
         start, alloc, false);
     ReservationDefinition rDef = createSimpleReservationDefinition(start, start
         + alloc.length, alloc.length, allocations.values());
     ReservationAllocation rAllocation = new InMemoryReservationAllocation(
         reservationID, rDef, user, planName, start, start + alloc.length,
-        allocations, resCalc, minAlloc, label1);
+        allocations, resCalc, minAlloc, label1, false);
 
     int[] alloc2 = { 20, 20, 20 };
-    Map<ReservationInterval, ReservationRequest> allocations2 = generateAllocation(
+    Map<ReservationInterval, Resource> allocations2 = generateAllocation(
         start2, alloc2, false);
     ReservationDefinition rDef2 = createSimpleReservationDefinition(start,
         start + alloc.length, alloc.length, allocations.values());
     ReservationAllocation rAllocation2 = new InMemoryReservationAllocation(
         reservationID, rDef2, user, planName, start2, start2 + alloc2.length,
-        allocations2, resCalc, minAlloc, label2);
+        allocations2, resCalc, minAlloc, label2, true);
 
     Map<String, ReservationAllocation> resAllocations = new HashMap<>();
     resAllocations.put(rAllocation.getNodeLabels().get(0), rAllocation);
@@ -293,11 +293,11 @@ public class TestInMemoryPlanNodeLabel {
   }
 
   private ReservationDefinition createSimpleReservationDefinition(long arrival,
-      long deadline, long duration, Collection<ReservationRequest> resources) {
+      long deadline, long duration, Collection<Resource> resources) {
     // create a request with a single atomic ask
     ReservationDefinition rDef = new ReservationDefinitionPBImpl();
     ReservationRequests reqs = new ReservationRequestsPBImpl();
-    reqs.setReservationResources(new ArrayList<ReservationRequest>(resources));
+    reqs.setReservationResources(null);
     reqs.setInterpreter(ReservationRequestInterpreter.R_ALL);
     rDef.setReservationRequests(reqs);
     rDef.setArrival(arrival);
@@ -305,9 +305,9 @@ public class TestInMemoryPlanNodeLabel {
     return rDef;
   }
 
-  private Map<ReservationInterval, ReservationRequest> generateAllocation(
+  private Map<ReservationInterval, Resource> generateAllocation(
       int startTime, int[] alloc, boolean isStep) {
-    Map<ReservationInterval, ReservationRequest> req = new HashMap<ReservationInterval, ReservationRequest>();
+    Map<ReservationInterval, Resource> req = new HashMap<ReservationInterval, Resource>();
     int numContainers = 0;
     for (int i = 0; i < alloc.length; i++) {
       if (isStep) {
@@ -315,8 +315,7 @@ public class TestInMemoryPlanNodeLabel {
       } else {
         numContainers = alloc[i];
       }
-      ReservationRequest rr = ReservationRequest.newInstance(
-          Resource.newInstance(1024, 1), (numContainers));
+      Resource rr = Resource.newInstance(1024 * numContainers, numContainers);
       req.put(new ReservationInterval(startTime + i, startTime + i + 1), rr);
     }
     return req;

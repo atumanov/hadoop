@@ -24,7 +24,6 @@ import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
-import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -51,7 +50,7 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
       if (r.containsGangs()) {
         this.setHasGang(true);
       }
-      for (Map.Entry<ReservationInterval, ReservationRequest> e : r
+      for (Map.Entry<ReservationInterval, Resource> e : r
           .getAllocationRequests().entrySet()) {
         super.resourcesOverTime.addInterval(e.getKey(), e.getValue());
       }
@@ -69,7 +68,7 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
   }
 
   @Override
-  public Map<ReservationInterval, ReservationRequest> getAllocationRequests() {
+  public Map<ReservationInterval, Resource> getAllocationRequests() {
     return getAllocationRequests(RMNodeLabelsManager.NO_LABEL);
   }
 
@@ -79,7 +78,7 @@ class MultiNodeLabelReservationAllocation extends InMemoryReservationAllocation 
   }
 
   @Override
-  public Map<ReservationInterval, ReservationRequest> getAllocationRequests(
+  public Map<ReservationInterval, Resource> getAllocationRequests(
       String nodeLabel) {
     if (perLabelAllocations.containsKey(nodeLabel)) {
       return perLabelAllocations.get(nodeLabel)
