@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -46,6 +47,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * This class tests the multi-NodeLabel functionalities of the reservation plan.
+ * 
+ */
 public class TestInMemoryPlanNodeLabel {
 
   private String user = "yarn";
@@ -215,6 +220,13 @@ public class TestInMemoryPlanNodeLabel {
             Resource.newInstance(1024 * (alloc2[i]), (alloc2[i])),
             plan.getConsumptionForUser(user, i));
       }
+      
+      Set<ReservationAllocation> allocs = plan.getReservationsAtTime(start + 1);
+      
+      for(ReservationAllocation ra : allocs){
+        Assert.assertTrue(ra instanceof MultiNodeLabelReservationAllocation);
+      }
+
     }
   }
 
@@ -245,22 +257,17 @@ public class TestInMemoryPlanNodeLabel {
     int start2 = 103;
     int allocMult = 10;
     addUpdateReservation(plan, reservationID, start, start2, allocMult, true);
-
-    
     try {
       plan.deleteReservation(reservationID);
     } catch (PlanningException e) {
       e.printStackTrace();
     }
-
     Assert.assertNull(plan.getReservationById(reservationID));
     Assert.assertTrue(plan.getReservationsAtTime(start + 1).isEmpty());
     Assert.assertTrue(plan.getConsumptionForUser(user, start + 1).getMemory() == 0);
     Assert.assertTrue(plan.getTotalCommittedResources(start + 1).getMemory() == 0);
     Assert.assertTrue(plan.getTotalCommittedResources(start + 1, label1).getMemory() == 0);
     Assert.assertTrue(plan.getTotalCommittedResources(start + 1, label2).getMemory() == 0);
-
-  
   }
   
   
