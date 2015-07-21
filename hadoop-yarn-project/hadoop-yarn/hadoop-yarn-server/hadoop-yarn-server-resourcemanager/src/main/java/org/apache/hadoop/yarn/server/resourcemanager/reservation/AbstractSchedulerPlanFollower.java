@@ -86,16 +86,18 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     }
     Queue planQueue = getPlanQueue(planQueueName);
     if (planQueue == null) return;
-
+    Set<String> allPlanQueueLabels = new HashSet<String>(Collections.singleton(RMNodeLabelsManager.NO_LABEL));
+    if (planQueue.getAccessibleNodeLabels() != null) {
+      allPlanQueueLabels.addAll(planQueue.getAccessibleNodeLabels());
+    }
     // construct cluster resources by node label
     // rmNodeLabelList,rmNodeLabelResources -- cluster-level information, NOT queue-level
     List<RMNodeLabel> rmNodeLabelList = scheduler.getRMContext()
         .getNodeLabelManager().pullRMNodeLabelsInfo();
+
     Map<String, Resource> rmNodeLabelResources = new HashMap<String, Resource>();
-    Map<String, Resource> reservedResources = new HashMap<String, Resource>();
     for (RMNodeLabel rmnl: rmNodeLabelList) {
       rmNodeLabelResources.put(rmnl.getLabelName(), rmnl.getResource());
-      reservedResources.put(rmnl.getLabelName(), Resource.newInstance(0,0));
     }
     // now get the amount of resources used by the current plan queue
     // qNodeLabelResources -- queue-level information
@@ -108,6 +110,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     Set<String> curReservationLabels = new HashSet<String>();
     //Resource reservedResources = Resource.newInstance(0, 0);
     // curReservationNames is populated with names of current reservations as a side-effect 
+    Map<String, Resource> reservedResources = new HashMap<String, Resource>();
     int numRes = getReservedResources(now, currentReservations,
         curReservationNames, reservedResources);
     // post-condition: curReservationNames and reservedResources are set
@@ -169,9 +172,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     //   end for
     //   set default queue entitlement
     // end for
-    Set<String> allPlanQueueLabels = new HashSet<String>();
-    allPlanQueueLabels.addAll(planQueue.getAccessibleNodeLabels());
-    allPlanQueueLabels.add(RMNodeLabelsManager.NO_LABEL);
+
     // Add new reservations and update existing ones
     Map<String, Float> totalAssignedCapacity = new HashMap<String, Float>();
     for (String l : allPlanQueueLabels) {
@@ -317,13 +318,14 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
       String expiredReservationId = getReservationIdFromQueueName(q.getQueueName());
       // construct an entitlement object encapsulating all labels for this queue
       QueueCapacities zeroqCap = new QueueCapacities(false);
-      for (String label : q.getAccessibleNodeLabels()) {
+      Set<String> allQLabels = new HashSet<String>(Collections.singleton(RMNodeLabelsManager.NO_LABEL));
+      if (q.getAccessibleNodeLabels() != null) {
+        allQLabels.addAll(q.getAccessibleNodeLabels());
+      }
+      for (String label : allQLabels) {
         zeroqCap.setCapacity(label, 0f);
         zeroqCap.setMaximumCapacity(label, 0f);
       }
-      
-      zeroqCap.setCapacity(RMNodeLabelsManager.NO_LABEL, 0f);
-      zeroqCap.setMaximumCapacity(RMNodeLabelsManager.NO_LABEL, 0f);
       
       try {
         // set entitlement generically
@@ -449,7 +451,16 @@ return numRes;
       Map<String, Resource> clusterResources, 
       Map<String, Resource> planResources,
       Map<String, Resource> reservedResources) {
-    for (String l: planResources.keySet()) {
+    if (reservedResources == null || reservedResources.isEmpty()) {
+      // there are no reservations => plan > reserved
+      return false;
+    }
+    if (planResources == null || planResources.isEmpty()) {
+      // there are reservations but no plan => plan < reserved
+      return true;
+    }
+    // this is both a plan and reservations : compare for each label in reservations
+    for (String l: reservedResources.keySet()) {
       boolean nlGreater = Resources.greaterThan(scheduler.getResourceCalculator(),
           clusterResources.get(l), reservedResources.get(l), planResources.get(l));
       if (!nlGreater)
