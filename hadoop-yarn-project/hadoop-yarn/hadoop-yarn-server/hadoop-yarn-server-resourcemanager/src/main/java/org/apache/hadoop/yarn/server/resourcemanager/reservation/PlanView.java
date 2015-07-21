@@ -137,6 +137,16 @@ public interface PlanView extends PlanContext {
    * @return the time (UTC in ms) at which the last reservation terminates
    */
   public long getLastEndTime(String nodeLabel);
+
+  /**
+   * Return the set of partitions that exist in this Plan that match the OR
+   * expression provided in input
+   * 
+   * @param nodeLabelORExpression and OR of partitions (it can contain
+   *          partitions that do not exist in this plan)
+   * @return a set of partitions matching this expression 
+   */
+  public Set<String> findMatchingPartitions(String nodeLabelORExpression);
   
 
 }

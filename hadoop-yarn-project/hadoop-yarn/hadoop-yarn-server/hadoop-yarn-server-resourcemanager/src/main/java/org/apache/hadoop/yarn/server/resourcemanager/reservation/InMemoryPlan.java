@@ -467,30 +467,31 @@ class InMemoryPlan implements Plan {
     }
   }
   
-  // NOTE: this makes sense because the totalCapacities are expressed on
-  // "partitions" of the cluster i.e., if there are two labels GPU and PUB-IP we
-  // will have exploded the cluster in the 4 basic partitions GPU_AND_PUB-IP,
-  // GPU_AND_NO-PUBIP, NO-GPU_AND_PUBIP, NO-GPU_AND_NO-PUBIP, thus every desired
-  // subset is expressible as an OR of this partitions.
-  private Set<String> findMatchingPartitions(String nodeLabelExpression) {
 
+  @Override
+  public Set<String> findMatchingPartitions(String nodeLabelORExpression) {
+    // NOTE: this makes sense because the totalCapacities are expressed on
+    // "partitions" of the cluster i.e., if there are two labels GPU and PUB-IP we
+    // will have exploded the cluster in the 4 basic partitions GPU_AND_PUB-IP,
+    // GPU_AND_NO-PUBIP, NO-GPU_AND_PUBIP, NO-GPU_AND_NO-PUBIP, thus every desired
+    // subset is expressible as an OR of this partitions.
     Set<String> matchingPartitions = new HashSet<String>();
 
     Set<String> partitionsInExpression = new HashSet<String>();
 
-    if (nodeLabelExpression.contains(" || ")) {
-      String[] portionsOfExpression = nodeLabelExpression.split("\\|\\|");
+    if (nodeLabelORExpression.contains(" || ")) {
+      String[] portionsOfExpression = nodeLabelORExpression.split("\\|\\|");
       for(String s:portionsOfExpression){
         partitionsInExpression.add(s.trim());
       }
     } else {
-      if (nodeLabelExpression.contains(" OR ")) {
-        String[] portionsOfExpression = nodeLabelExpression.split(" OR ");
+      if (nodeLabelORExpression.contains(" OR ")) {
+        String[] portionsOfExpression = nodeLabelORExpression.split(" OR ");
         for(String s:portionsOfExpression){
           partitionsInExpression.add(s.trim());
         }
       }
-      partitionsInExpression.add(nodeLabelExpression);
+      partitionsInExpression.add(nodeLabelORExpression);
     }
 
     for (String partition : partitionsInExpression) {

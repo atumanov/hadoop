@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -168,10 +169,12 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     //   end for
     //   set default queue entitlement
     // end for
-    
+    Set<String> allPlanQueueLabels = new HashSet<String>();
+    allPlanQueueLabels.addAll(planQueue.getAccessibleNodeLabels());
+    allPlanQueueLabels.add(RMNodeLabelsManager.NO_LABEL);
     // Add new reservations and update existing ones
     Map<String, Float> totalAssignedCapacity = new HashMap<String, Float>();
-    for (String l : curReservationLabels) {
+    for (String l : allPlanQueueLabels) {
       totalAssignedCapacity.put(l, 0f);
       // first release all excess capacity in default queue
       try {
@@ -188,9 +191,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
       // construct a set of ReservationAllocations just for the current label
       Set<ReservationAllocation> currentNLReservations = new HashSet<ReservationAllocation>();
       for (ReservationAllocation res: currentReservations) {
-        // downcast the reservation to access per label child reservations
-        MultiNodeLabelReservationAllocation nlres = (MultiNodeLabelReservationAllocation)res;
-        ReservationAllocation curNLRes = nlres.getPerLabelAllocations().get(l);
+        ReservationAllocation curNLRes = res.getPerLabelAllocations().get(l);
         if (curNLRes != null) {
           currentNLReservations.add(curNLRes);
         }
@@ -320,6 +321,9 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
         zeroqCap.setCapacity(label, 0f);
         zeroqCap.setMaximumCapacity(label, 0f);
       }
+      
+      zeroqCap.setCapacity(RMNodeLabelsManager.NO_LABEL, 0f);
+      zeroqCap.setMaximumCapacity(RMNodeLabelsManager.NO_LABEL, 0f);
       
       try {
         // set entitlement generically

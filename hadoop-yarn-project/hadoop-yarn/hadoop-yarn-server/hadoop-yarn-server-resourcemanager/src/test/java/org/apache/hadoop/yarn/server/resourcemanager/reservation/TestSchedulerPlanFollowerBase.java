@@ -130,7 +130,7 @@ public abstract class TestSchedulerPlanFollowerBase {
       Assert.assertEquals(1, getNumberOfApplications(defQ));
       assertNull(q);
     } else {
-      // app should be killed
+      // app should be killed, but the queue remains
       Assert.assertEquals(0, getNumberOfApplications(defQ));
       assertNotNull(q);
       AppAttemptRemovedSchedulerEvent appAttemptRemovedEvent =
